@@ -9,13 +9,13 @@ export default function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
 
-  // ข้อมูลสินค้า (ขายแค่ปลาแดดเดียว)
+  // ข้อมูลสินค้า (อัปเดตเป็นรูปใหม่และชื่อตามป้าย)
   const product = {
-    name: "ปลาแดดเดียว สูตรวิสาหกิจบ้านป่าตึงงาม",
+    name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
     vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
     price: 150,
-    unit: "กก.",
-    image: "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop",
+    unit: "แพ็ค", 
+    image: "/cover_648a8ae1db991.jpg", // ดึงรูปจากโฟลเดอร์ public
   };
 
   const addToCart = () => {
@@ -28,9 +28,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-gray-800 pb-20 font-sans">
       
-      {/* 1. Navbar (ธีมสีเขียว-ทอง) */}
+      {/* 1. Navbar */}
       <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
-        {/* Logo วิสาหกิจชุมชน */}
         <div className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f]">
           <div className="bg-[#0a4a2f] p-2 rounded-full border-2 border-[#f3c623]">
             <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -38,7 +37,6 @@ export default function HomePage() {
           วิสาหกิจบ้านป่าตึงงาม
         </div>
 
-        {/* Search Bar */}
         <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
           <input
             type="text"
@@ -48,9 +46,7 @@ export default function HomePage() {
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         </div>
 
-        {/* เมนูขวา & ปุ่มตะกร้า */}
         <div className="flex items-center gap-6 text-sm font-medium">
-          {/* ปุ่มรถเข็น */}
           <button 
             onClick={() => setIsCartOpen(true)}
             className="relative flex items-center gap-2 text-gray-600 hover:text-[#0a4a2f] transition p-2"
@@ -70,16 +66,10 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. Hero Section (รูปแบนเนอร์ใหญ่) */}
-      <div className="relative w-full h-[500px] flex flex-col items-center justify-center text-white bg-gray-900">
-        <img 
-          src="https://images.unsplash.com/photo-1505934333218-8fe31602e971?q=80&w=2000&auto=format&fit=crop" 
-          alt="Community Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-50"
-        />
-        
+      {/* 2. Hero Section */}
+      <div className="relative w-full h-[400px] flex flex-col items-center justify-center text-white bg-[#0a4a2f]">
         <div className="z-10 text-center space-y-6 max-w-3xl px-4 mt-8 flex flex-col items-center">
-          <div className="bg-[#0a4a2f]/90 text-[#f3c623] px-5 py-2 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-sm border border-[#f3c623]/50 font-bold shadow-lg">
+          <div className="bg-white/20 text-[#f3c623] px-5 py-2 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-sm border border-[#f3c623]/50 font-bold shadow-lg">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
           </div>
           
@@ -87,17 +77,13 @@ export default function HomePage() {
             วิสาหกิจบ้านป่าตึงงาม<br/>หมู่ 18
           </h1>
           
-          <p className="text-gray-100 text-lg md:text-xl drop-shadow-md">
-            ปลาแดดเดียว จากปลานิลสด สะอาด ปลอดภัย <br className="hidden md:block"/>แปรรูปด้วยภูมิปัญญาชุมชน สนับสนุนสินค้าท้องถิ่นสร้างรายได้ยั่งยืน
+          <p className="text-gray-200 text-lg md:text-xl drop-shadow-md">
+            ปลาสวายแดดเดียว เนื้อดี รสแซ่บ สะอาด ปลอดภัย <br className="hidden md:block"/>แปรรูปด้วยภูมิปัญญาชุมชน สนับสนุนสินค้าท้องถิ่นสร้างรายได้ยั่งยืน
           </p>
-          
-          <button onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })} className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-full font-semibold mt-4 flex items-center gap-2 transition text-lg shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5">
-            เลือกซื้อสินค้า <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-          </button>
         </div>
       </div>
 
-      {/* 3. สินค้าแนะนำ (เหลือสินค้าชิ้นเดียวตามสั่ง) */}
+      {/* 3. สินค้าแนะนำ */}
       <div id="products" className="max-w-7xl mx-auto px-6 mt-16">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
@@ -106,33 +92,43 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ตะแกรงสินค้า (โชว์แค่ปลาแดดเดียว) */}
+        {/* การ์ดสินค้า */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           
-          {/* การ์ดสินค้า ปลาแดดเดียว */}
-          <div className="group bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-xl transition duration-300">
-            <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 mb-4">
-              <img src={product.image} alt="ปลาแดดเดียว" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-              <div className="absolute top-2 left-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+          <div className="group bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-xl transition duration-300">
+            {/* กล่องรูปภาพสินค้า */}
+            <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 mb-4 flex items-center justify-center">
+              <img 
+                src={product.image} 
+                alt="ปลาสวายแดดเดียว" 
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
+                onError={(e) => {
+                  // เผื่อรูปไม่ขึ้น จะได้โชว์กล่องสีเทาแทน
+                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/400x500?text=Image+Not+Found";
+                }}
+              />
+              <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
                 พร้อมส่ง
               </div>
             </div>
+
             <div className="flex items-center gap-1.5 mb-2 px-1">
               <svg className="w-4 h-4 text-[#0a4a2f]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
               <span className="text-xs font-medium text-[#0a4a2f] bg-green-50 px-2 py-0.5 rounded">{product.vendor}</span>
             </div>
-            <h3 className="font-semibold text-gray-900 text-lg px-1 group-hover:text-[#0a4a2f] transition">{product.name}</h3>
             
-            <div className="flex items-center justify-between mt-4 px-1 pb-1">
-              <p className="text-orange-600 font-bold text-2xl">฿{product.price} <span className="text-sm text-gray-500 font-normal">/ {product.unit}</span></p>
+            <h3 className="font-bold text-gray-900 text-xl px-1 group-hover:text-[#0a4a2f] transition mb-1">{product.name}</h3>
+            <p className="text-sm text-gray-500 px-1 line-clamp-2">เนื้อดี รสแซ่บ ที่หนึ่งเดียว แพ็คสุญญากาศอย่างดี</p>
+            
+            <div className="flex items-center justify-between mt-4 px-1 pt-4 border-t border-gray-100">
+              <p className="text-orange-600 font-extrabold text-2xl">฿{product.price} <span className="text-sm text-gray-500 font-normal">/ {product.unit}</span></p>
               
-              {/* ปุ่มเพิ่มลงตะกร้า (ทำงานได้จริง) */}
               <button 
                 onClick={addToCart}
-                className="bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] p-2.5 rounded-full transition shadow-md"
+                className="bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] p-3 rounded-full transition shadow-md hover:scale-105"
                 title="เพิ่มลงตะกร้า"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
               </button>
             </div>
           </div>
@@ -145,7 +141,6 @@ export default function HomePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-in fade-in zoom-in duration-200">
             
-            {/* Header ป๊อปอัป */}
             <div className="bg-[#0a4a2f] p-4 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold text-[#f3c623]">
                 {showPayment ? "ชำระเงิน (QR Code)" : "ตะกร้าสินค้าของคุณ"}
@@ -158,10 +153,8 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* เนื้อหาในป๊อปอัป */}
             <div className="p-6">
               {!showPayment ? (
-                /* --- หน้ารายการสินค้าในตะกร้า --- */
                 cartQty === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -170,10 +163,14 @@ export default function HomePage() {
                 ) : (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-                      <div className="pr-2">
-                        <h3 className="font-bold text-[#0a4a2f] line-clamp-2">{product.name}</h3>
-                        <p className="text-sm text-orange-600 font-semibold mt-1">฿{product.price} / {product.unit}</p>
+                      <div className="flex gap-4 items-center">
+                        <img src={product.image} alt="product" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                        <div className="pr-2">
+                          <h3 className="font-bold text-[#0a4a2f] line-clamp-1">{product.name}</h3>
+                          <p className="text-sm text-orange-600 font-semibold mt-1">฿{product.price} / {product.unit}</p>
+                        </div>
                       </div>
+                      
                       <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm shrink-0">
                         <button onClick={() => setCartQty(cartQty - 1)} className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">-</button>
                         <span className="font-bold w-4 text-center">{cartQty}</span>
@@ -195,20 +192,21 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
-                /* --- หน้าชำระเงิน QR Code --- */
                 <div className="flex flex-col items-center space-y-4">
                   <div className="w-full flex justify-between items-end border-b border-gray-100 pb-3">
                     <span className="text-gray-500">ยอดที่ต้องชำระ:</span>
                     <span className="font-extrabold text-orange-600 text-2xl">฿{totalPrice}</span>
                   </div>
                   
-                  {/* รูป QR Code จากที่คุณส่งมา */}
                   <div className="border-4 border-[#0a4a2f] p-2 rounded-2xl bg-white shadow-lg relative">
-                    {/* ตรงนี้จะดึงรูปจากโฟลเดอร์ public/ */}
+                    {/* ดึงรูป QR Code จากโฟลเดอร์ public */}
                     <img 
                       src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" 
                       alt="Thai QR Payment" 
                       className="w-64 h-auto object-contain rounded-xl"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://via.placeholder.com/256?text=QR+Code+Not+Found";
+                      }}
                     />
                   </div>
 
