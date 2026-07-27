@@ -4,9 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-// 🔴 1. ใส่ URL และ Anon Key ของคุณตรงนี้ (ดูวิธีเอาจากขั้นที่ 3 ด้านล่าง)
-const supabaseUrl = 'https://grilvqiyczvdkfumxxqy.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaWx2cWl5Y3p2ZGtmdW14eHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMjM0NjIsImV4cCI6MjEwMDY5OTQ2Mn0.xoT69q46aqz6SAXNsiDLUd4BEyf2Q4yfB9teuEHYktM'; 
+const supabaseUrl = "https://grilvqiyczvdkfumxxqy.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaWx2cWl5Y3p2ZGtmdW14eHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzg2MTQsImV4cCI6MjA1NjgxNDYxNH0.exJpC3MioijzdXBHmFzIsInJ1ZmljZXVudnd1N2VwM2ZzZl5ISnJpZF9tMjAwcXVyeQxZ50T69q46aAXNSnltD4bEYf2QMn0.xot69q46aGz6SAXNsInJ1ZマイD4bEYf2QMn0"; 
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -23,11 +22,9 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     
-    // ลองเข้าสู่ระบบก่อน
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      // ถ้าเข้าไม่ได้ (อาจจะยังไม่ได้สมัคร) ลองจับสมัครสมาชิกเลย
       const { error: signUpError } = await supabase.auth.signUp({ email, password });
       if (signUpError) {
         alert("รหัสผ่านผิด หรือ " + signUpError.message);
@@ -46,8 +43,6 @@ export default function LoginPage() {
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    // แปลงเบอร์ 08x เป็น +668x
     const formattedPhone = "+66" + phone.replace(/^0/, "");
     
     const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
@@ -86,12 +81,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center p-4 font-sans">
       <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center relative shadow-2xl animate-in fade-in zoom-in duration-300">
         
-        {/* ปุ่มปิดมุมขวาบน */}
         <Link href="/" className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition">
           ✕
         </Link>
 
-        {/* โลโก้ */}
         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         </div>
@@ -99,7 +92,6 @@ export default function LoginPage() {
         <h1 className="text-2xl font-extrabold text-gray-900 mb-1">เข้าสู่ระบบ</h1>
         <p className="text-sm text-gray-500 mb-8">เพื่อสั่งซื้อสินค้าและติดตามสถานะ</p>
 
-        {/* --- หน้าเมนูเลือกวิธีล็อกอิน --- */}
         {view === "menu" && (
           <div className="space-y-3">
             <button 
@@ -119,16 +111,15 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* --- หน้ากรอกอีเมล --- */}
         {view === "email" && (
           <form onSubmit={handleEmailLogin} className="space-y-4 text-left">
             <div>
               <label className="text-sm font-bold text-gray-700">อีเมล</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="example@email.com" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="example@email.com" />
             </div>
             <div>
               <label className="text-sm font-bold text-gray-700">รหัสผ่าน</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="••••••••" />
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="••••••••" />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-[#0a4a2f] text-white py-3 rounded-xl font-bold hover:bg-[#073622] transition">
               {loading ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ / สมัครสมาชิก"}
@@ -137,14 +128,13 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* --- หน้ากรอกเบอร์โทรศัพท์ --- */}
         {view === "phone" && (
           <form onSubmit={handlePhoneLogin} className="space-y-4 text-left">
             <div>
               <label className="text-sm font-bold text-gray-700">เบอร์โทรศัพท์ (ไม่ต้องใส่ขีด)</label>
               <div className="flex mt-1">
                 <span className="inline-flex items-center px-4 bg-gray-100 border border-r-0 border-gray-300 rounded-l-xl text-gray-500 font-bold">+66</span>
-                <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-3 border border-gray-300 rounded-r-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="0812345678" />
+                <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-3 border border-gray-300 rounded-r-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="0812345678" />
               </div>
             </div>
             <button type="submit" disabled={loading} className="w-full bg-[#0a4a2f] text-white py-3 rounded-xl font-bold hover:bg-[#073622] transition">
@@ -154,12 +144,11 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* --- หน้ากรอกรหัส OTP --- */}
         {view === "otp" && (
           <form onSubmit={handleVerifyOtp} className="space-y-4 text-left">
             <div>
               <label className="text-sm font-bold text-gray-700">รหัส OTP 6 หลัก</label>
-              <input type="text" required value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-center tracking-widest text-xl" placeholder="123456" maxLength={6} />
+              <input type="text" required value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-center tracking-widest text-xl text-gray-900 font-bold" placeholder="123456" maxLength={6} />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
               {loading ? "กำลังตรวจสอบ..." : "ยืนยันรหัส OTP"}
