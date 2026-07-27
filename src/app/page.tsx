@@ -1,17 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function HomePage() {
+  // --- ตัวอ้างอิงวิดีโอเพื่อแก้บั๊ก Autoplay ---
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch((error) => {
+        console.log("Autoplay stopped by browser:", error);
+      });
+    }
+  }, []);
+
   // --- ระบบจัดการตะกร้าสินค้าและการสั่งซื้อ ---
   const [cartQty, setCartQty] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   
-  // สถานะฟอร์มที่อยู่และวิธีชำระเงิน
   const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("qr"); // 'qr' = โอนเงิน, 'cod' = ปลายทาง
+  const [paymentMethod, setPaymentMethod] = useState("qr");
 
   // ข้อมูลสินค้า
   const product = {
@@ -29,7 +41,6 @@ export default function HomePage() {
 
   const totalPrice = cartQty * product.price;
 
-  // ฟังก์ชันยืนยันการสั่งซื้อ
   const handleConfirmOrder = () => {
     if (!address.trim()) {
       alert("กรุณากรอกข้อมูลที่อยู่และเบอร์โทรศัพท์สำหรับจัดส่งด้วยครับ");
@@ -42,7 +53,6 @@ export default function HomePage() {
       alert("สั่งซื้อสำเร็จ! กรุณาเตรียมเงินสดชำระกับพนักงานส่งของครับ\nจัดส่งไปที่: " + address);
     }
     
-    // เคลียร์ตะกร้าเมื่อสั่งซื้อเสร็จ
     setCartQty(0);
     setAddress("");
     setIsCartOpen(false);
@@ -90,11 +100,11 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. Hero Section (วิดีโอพื้นหลัง) */}
-      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden">
+      {/* 2. Hero Section (วิดีโอพื้นหลังพร้อมสั่งให้ Play ผ่าน Ref) */}
+      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-black">
         
-        {/* วิดีโอพื้นหลัง (ดึงไฟล์ hero-video.mp4 จากโฟลเดอร์ public) */}
         <video 
+          ref={videoRef}
           autoPlay 
           loop 
           muted 
@@ -104,16 +114,13 @@ export default function HomePage() {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* แผ่นฟิล์มสีดำโปร่งแสง (Overlay) เพื่อให้วิดีโอมืดลงนิดนึง ตัวหนังสือจะได้เด่นขึ้น */}
         <div className="absolute inset-0 bg-black/40"></div>
 
-        {/* เนื้อหาข้อความ */}
         <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
           <div className="bg-black/50 text-[#f3c623] px-6 py-2.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
           </div>
           
-          {/* ชื่อหมู่บ้าน พร้อมเงาดำหนา (Text Shadow) ตัดกับวิดีโอ */}
           <h1 
             className="text-5xl md:text-7xl font-extrabold leading-tight text-white tracking-wide"
             style={{ textShadow: "0px 4px 15px rgba(0, 0, 0, 0.9), 0px 2px 5px rgba(0, 0, 0, 0.7)" }}
@@ -132,11 +139,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* การ์ดสินค้า */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div className="group bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-xl transition duration-300 relative">
             
-            {/* พื้นที่รูปภาพ (คลิกเพื่อเพิ่มลงตะกร้าได้) */}
             <div 
               onClick={addToCart}
               title="คลิกรูปภาพเพื่อเพิ่มลงตะกร้า"
@@ -282,46 +287,4 @@ export default function HomePage() {
                   {paymentMethod === "qr" ? (
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center">
                       <div className="border-4 border-[#0a4a2f] p-2 rounded-xl bg-white shadow-sm mb-3">
-                        <img 
-                          src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" 
-                          alt="Thai QR Payment" 
-                          className="w-48 h-auto object-contain rounded-lg"
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500">สแกน QR เพื่อโอนเข้าบัญชี</p>
-                      <p className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</p>
-                    </div>
-                  ) : (
-                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 flex flex-col items-center text-center space-y-2">
-                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-1">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                      </div>
-                      <p className="font-bold text-orange-800">เตรียมเงินสดไว้ชำระกับพนักงานส่งของ</p>
-                      <p className="text-sm text-orange-600">เมื่อสินค้าส่งถึงหน้าบ้านคุณ</p>
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <button 
-                      onClick={handleConfirmOrder}
-                      className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3.5 rounded-xl font-bold text-lg transition shadow-md"
-                    >
-                      {paymentMethod === "qr" ? "แจ้งชำระเงิน / แนบสลิป" : "ยืนยันการสั่งซื้อ (เก็บเงินปลายทาง)"}
-                    </button>
-                    <button 
-                      onClick={() => setShowPayment(false)}
-                      className="w-full text-center text-sm text-gray-500 hover:text-gray-800 mt-4 block"
-                    >
-                      ย้อนกลับไปแก้ไขตะกร้า
-                    </button>
-                  </div>
-
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                        <img
