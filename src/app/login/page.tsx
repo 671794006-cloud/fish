@@ -1,90 +1,61 @@
-"use client";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
-
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-4">
-      {/* Background blobs for premium feel */}
-      <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-500/20 backdrop-blur-sm p-4">
+      {/* Login Card */}
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+        
+        {/* Close Button (X) */}
+        <Link href="/" className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </Link>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md z-10"
-      >
-        <Card className="bg-neutral-900/80 backdrop-blur-xl border-neutral-800 text-white shadow-2xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center tracking-tight">เข้าสู่ระบบ</CardTitle>
-            <CardDescription className="text-center text-neutral-400">
-              ยินดีต้อนรับสู่ร้านค้าชุมชนของเรา
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all font-medium text-blue-400">
-                Facebook
-              </Button>
-              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all font-medium text-neutral-300">
-                Apple
-              </Button>
-            </div>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-neutral-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-neutral-900 px-2 text-neutral-500">หรือใช้เบอร์โทร/อีเมล</span>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="flex flex-col items-center text-center space-y-3 mb-8 mt-2">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">เข้าสู่ระบบ</h2>
+          <p className="text-gray-500">เพื่อสั่งซื้อสินค้าและติดตามสถานะ</p>
+        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="email">อีเมล / เบอร์โทรศัพท์</Label>
-              <Input 
-                id="email" 
-                type="text" 
-                placeholder="m@example.com" 
-                className="bg-neutral-800/50 border-neutral-700 text-white placeholder:text-neutral-500 focus-visible:ring-blue-500"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">รหัสผ่าน</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                className="bg-neutral-800/50 border-neutral-700 text-white focus-visible:ring-blue-500"
-              />
-            </div>
-            
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 transition-all shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)]">
-              เข้าสู่ระบบ <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <div className="text-center text-sm text-neutral-400">
-              ยังไม่มีบัญชี?{" "}
-              <Link href="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
-                สมัครสมาชิก
-              </Link>
-            </div>
-            <Link href="/" className="text-center text-sm text-neutral-500 hover:text-white transition-colors">
-              กลับสู่หน้าหลัก
-            </Link>
-          </CardFooter>
-        </Card>
-      </motion.div>
+        {/* Action Buttons */}
+        <div className="space-y-4">
+          {/* Facebook Button */}
+          <button className="w-full flex items-center justify-center gap-3 bg-[#1877F2] hover:bg-[#166FE5] text-white py-3.5 rounded-2xl font-medium transition text-lg">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            ดำเนินการต่อด้วย Facebook
+          </button>
+
+          {/* Apple Button */}
+          <button className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-800 text-white py-3.5 rounded-2xl font-medium transition text-lg">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.04 2.26-.7 3.58-.6 2.02.13 3.32 1.05 4.14 2.37-3.22 1.96-2.64 6.13.56 7.33-.76 1.8-1.74 3.55-3.36 3.07zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+            ดำเนินการต่อด้วย Apple
+          </button>
+
+          {/* Divider */}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">หรือ</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+
+          {/* Email Button (เพิ่มใหม่ตามคำขอ) */}
+          <button className="w-full flex items-center justify-center gap-3 border border-gray-300 hover:bg-gray-50 text-gray-700 bg-white py-3.5 rounded-2xl font-medium transition text-lg shadow-sm">
+            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            เข้าสู่ระบบด้วยอีเมล
+          </button>
+
+          {/* Phone Button */}
+          <button className="w-full flex items-center justify-center gap-3 border border-gray-300 hover:bg-gray-50 text-gray-700 bg-white py-3.5 rounded-2xl font-medium transition text-lg shadow-sm">
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            เข้าสู่ระบบด้วยเบอร์โทรศัพท์
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
