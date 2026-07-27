@@ -23,13 +23,15 @@ export default function HomePage() {
   const [address, setAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
 
-  // ข้อมูลสินค้า (ดึงรูปจาก Supabase โดยตรง)
+  // ข้อมูลสินค้า (เพิ่มรายละเอียดส่วนประกอบและจุดเด่น)
   const product = {
     name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
     vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
     price: 150,
     unit: "แพ็ค", 
     image: "https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/cover_648a8ae1db991.jpg", 
+    ingredients: "เนื้อปลาสวาย 80%, กระเทียม 5.5%, น้ำตาล 5%, ข้าวสุก 5%, เกลือไอโอดีน 3.5%",
+    properties: "แพ็คสุญญากาศอย่างดี ไร้สารกันบูด เก็บในตู้เย็นได้นาน"
   };
 
   const addToCart = () => {
@@ -64,7 +66,7 @@ export default function HomePage() {
       <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f]">
           <div className="bg-[#0a4a2f] p-2 rounded-full border-2 border-[#f3c623]">
-            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1m-6 0h6"></path></svg>
           </div>
           วิสาหกิจบ้านป่าตึงงาม
         </div>
@@ -167,7 +169,18 @@ export default function HomePage() {
             </div>
             
             <h3 className="font-bold text-gray-900 text-xl px-1 group-hover:text-[#0a4a2f] transition mb-1">{product.name}</h3>
-            <p className="text-sm text-gray-500 px-1 line-clamp-2">เนื้อดี รสแซ่บ ที่หนึ่งเดียว แพ็คสุญญากาศอย่างดี</p>
+            
+            {/* เพิ่มรายละเอียดสินค้าตรงนี้ */}
+            <div className="mx-1 mt-3 p-3 bg-green-50/50 border border-green-100 rounded-xl">
+              <h4 className="text-xs font-bold text-[#0a4a2f] mb-1.5 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                รายละเอียดสินค้า
+              </h4>
+              <ul className="text-[11px] text-gray-600 space-y-1">
+                <li><span className="font-semibold text-gray-700">ส่วนประกอบ:</span> {product.ingredients}</li>
+                <li><span className="font-semibold text-gray-700">จุดเด่น:</span> {product.properties}</li>
+              </ul>
+            </div>
             
             <div className="flex items-center justify-between mt-4 px-1 pt-4 border-t border-gray-100">
               <p className="text-orange-600 font-extrabold text-2xl">฿{product.price} <span className="text-sm text-gray-500 font-normal">/ {product.unit}</span></p>
