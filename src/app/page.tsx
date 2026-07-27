@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function HomePage() {
-  // --- ตัวอ้างอิงวิดีโอเพื่อบังคับให้เล่นอัตโนมัติ (แก้บั๊กเบราว์เซอร์) ---
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -12,27 +11,25 @@ export default function HomePage() {
       videoRef.current.defaultMuted = true;
       videoRef.current.muted = true;
       videoRef.current.play().catch((error) => {
-        console.log("Autoplay stopped by browser:", error);
+        console.log("Autoplay issue:", error);
       });
     }
   }, []);
 
-  // --- ระบบจัดการตะกร้าสินค้าและการสั่งซื้อ ---
   const [cartQty, setCartQty] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   
-  // สถานะฟอร์มที่อยู่และวิธีชำระเงิน
   const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("qr"); // 'qr' = โอนเงิน, 'cod' = ปลายทาง
+  const [paymentMethod, setPaymentMethod] = useState("qr");
 
-  // ข้อมูลสินค้า
+  // ข้อมูลสินค้า (ดึงรูปจาก Supabase โดยตรง)
   const product = {
     name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
     vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
     price: 150,
     unit: "แพ็ค", 
-    image: "/cover_648a8ae1db991.jpg", 
+    image: "https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/cover_648a8ae1db991.jpg", 
   };
 
   const addToCart = () => {
@@ -42,7 +39,6 @@ export default function HomePage() {
 
   const totalPrice = cartQty * product.price;
 
-  // ฟังก์ชันยืนยันการสั่งซื้อ
   const handleConfirmOrder = () => {
     if (!address.trim()) {
       alert("กรุณากรอกข้อมูลที่อยู่และเบอร์โทรศัพท์สำหรับจัดส่งด้วยครับ");
@@ -55,7 +51,6 @@ export default function HomePage() {
       alert("สั่งซื้อสำเร็จ! กรุณาเตรียมเงินสดชำระกับพนักงานส่งของครับ\nจัดส่งไปที่: " + address);
     }
     
-    // เคลียร์ตะกร้าเมื่อสั่งซื้อเสร็จ
     setCartQty(0);
     setAddress("");
     setIsCartOpen(false);
@@ -103,10 +98,8 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. Hero Section (วิดีโอพื้นหลังดึงจาก Supabase) */}
-      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-black">
-        
-        {/* ใช้ลิงก์วิดีโอจาก Supabase ของคุณโดยตรง */}
+      {/* 2. Hero Section */}
+      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-[#0a4a2f]">
         <video 
           ref={videoRef}
           autoPlay 
@@ -118,15 +111,12 @@ export default function HomePage() {
           <source src="https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* แผ่นฟิล์มสีดำโปร่งแสง (Overlay) เพื่อให้วิดีโอมืดลงนิดนึง ตัวหนังสือจะได้เด่นขึ้น */}
         <div className="absolute inset-0 bg-black/40"></div>
 
-        {/* เนื้อหาข้อความ */}
         <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
           <div className="bg-black/50 text-[#f3c623] px-6 py-2.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
           </div>
-          
           <h1 
             className="text-5xl md:text-7xl font-extrabold leading-tight text-white tracking-wide"
             style={{ textShadow: "0px 4px 15px rgba(0, 0, 0, 0.9), 0px 2px 5px rgba(0, 0, 0, 0.7)" }}
@@ -145,11 +135,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* การ์ดสินค้า */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div className="group bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-xl transition duration-300 relative">
             
-            {/* พื้นที่รูปภาพ (คลิกเพื่อเพิ่มลงตะกร้าได้) */}
             <div 
               onClick={addToCart}
               title="คลิกรูปภาพเพื่อเพิ่มลงตะกร้า"
@@ -160,7 +148,7 @@ export default function HomePage() {
                 alt="ปลาสวายแดดเดียว" 
                 className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/400x500?text=Image+Not+Found";
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop";
                 }}
               />
               <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md z-10">
@@ -183,7 +171,6 @@ export default function HomePage() {
             
             <div className="flex items-center justify-between mt-4 px-1 pt-4 border-t border-gray-100">
               <p className="text-orange-600 font-extrabold text-2xl">฿{product.price} <span className="text-sm text-gray-500 font-normal">/ {product.unit}</span></p>
-              
               <button 
                 onClick={addToCart}
                 className="bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] p-3 rounded-full transition shadow-md hover:scale-105 z-10 relative"
@@ -215,7 +202,6 @@ export default function HomePage() {
 
             <div className="p-6">
               {!showPayment ? (
-                /* ---------------- หน้าตะกร้า ---------------- */
                 cartQty === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -253,16 +239,12 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
-                /* ---------------- หน้าที่อยู่และชำระเงิน ---------------- */
                 <div className="flex flex-col space-y-5">
-                  
-                  {/* ยอดเงิน */}
                   <div className="w-full flex justify-between items-end border-b border-gray-100 pb-3">
                     <span className="text-gray-500">ยอดที่ต้องชำระ:</span>
                     <span className="font-extrabold text-orange-600 text-2xl">฿{totalPrice}</span>
                   </div>
 
-                  {/* ฟอร์มที่อยู่ */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -277,7 +259,6 @@ export default function HomePage() {
                     />
                   </div>
 
-                  {/* ตัวเลือกวิธีชำระเงิน */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 mb-2 block">เลือกวิธีชำระเงิน</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -289,4 +270,58 @@ export default function HomePage() {
                         <span className="text-sm font-bold">โอนเงิน (QR)</span>
                       </button>
                       <button 
-                        onClick={()
+                        onClick={() => setPaymentMethod("cod")}
+                        className={`p-3 rounded-xl border flex flex-col items-center gap-1 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-700 ring-1 ring-orange-500" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span className="text-sm font-bold">เก็บเงินปลายทาง</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {paymentMethod === "qr" ? (
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center">
+                      <div className="border-4 border-[#0a4a2f] p-2 rounded-xl bg-white shadow-sm mb-3">
+                        <img 
+                          src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" 
+                          alt="Thai QR Payment" 
+                          className="w-48 h-auto object-contain rounded-lg"
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500">สแกน QR เพื่อโอนเข้าบัญชี</p>
+                      <p className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</p>
+                    </div>
+                  ) : (
+                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 flex flex-col items-center text-center space-y-2">
+                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-1">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                      </div>
+                      <p className="font-bold text-orange-800">เตรียมเงินสดไว้ชำระกับพนักงานส่งของ</p>
+                      <p className="text-sm text-orange-600">เมื่อสินค้าส่งถึงหน้าบ้านคุณ</p>
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button 
+                      onClick={handleConfirmOrder}
+                      className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3.5 rounded-xl font-bold text-lg transition shadow-md"
+                    >
+                      {paymentMethod === "qr" ? "แจ้งชำระเงิน / แนบสลิป" : "ยืนยันการสั่งซื้อ (เก็บเงินปลายทาง)"}
+                    </button>
+                    <button 
+                      onClick={() => setShowPayment(false)}
+                      className="w-full text-center text-sm text-gray-500 hover:text-gray-800 mt-4 block"
+                    >
+                      ย้อนกลับไปแก้ไขตะกร้า
+                    </button>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
