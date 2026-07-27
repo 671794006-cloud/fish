@@ -1,60 +1,173 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+
+// 🔴 1. ใส่ URL และ Anon Key ของคุณตรงนี้ (ดูวิธีเอาจากขั้นที่ 3 ด้านล่าง)
+const supabaseUrl = 'https://grilvqiyczvdkfumxxqy.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaWx2cWl5Y3p2ZGtmdW14eHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMjM0NjIsImV4cCI6MjEwMDY5OTQ2Mn0.xoT69q46aqz6SAXNsiDLUd4BEyf2Q4yfB9teuEHYktM'; 
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function LoginPage() {
+  const [view, setView] = useState<"menu" | "email" | "phone" | "otp">("menu");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // --- ฟังก์ชันล็อกอินด้วยอีเมล ---
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // ลองเข้าสู่ระบบก่อน
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      // ถ้าเข้าไม่ได้ (อาจจะยังไม่ได้สมัคร) ลองจับสมัครสมาชิกเลย
+      const { error: signUpError } = await supabase.auth.signUp({ email, password });
+      if (signUpError) {
+        alert("รหัสผ่านผิด หรือ " + signUpError.message);
+      } else {
+        alert("สมัครสมาชิกสำเร็จ! เข้าสู่ระบบเรียบร้อย");
+        window.location.href = "/";
+      }
+    } else {
+      alert("เข้าสู่ระบบสำเร็จ!");
+      window.location.href = "/";
+    }
+    setLoading(false);
+  };
+
+  // --- ฟังก์ชันขอรหัส OTP สำหรับเบอร์โทร ---
+  const handlePhoneLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // แปลงเบอร์ 08x เป็น +668x
+    const formattedPhone = "+66" + phone.replace(/^0/, "");
+    
+    const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
+    
+    if (error) {
+      alert("ไม่สามารถส่ง SMS ได้: " + error.message);
+    } else {
+      alert("ส่งรหัส OTP ไปที่เบอร์ของคุณแล้ว!");
+      setView("otp");
+    }
+    setLoading(false);
+  };
+
+  // --- ฟังก์ชันยืนยันรหัส OTP ---
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const formattedPhone = "+66" + phone.replace(/^0/, "");
+    
+    const { error } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token: otp,
+      type: "sms",
+    });
+
+    if (error) {
+      alert("รหัส OTP ไม่ถูกต้อง!");
+    } else {
+      alert("ยืนยันเบอร์โทรสำเร็จ! เข้าสู่ระบบเรียบร้อย");
+      window.location.href = "/";
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-500/20 backdrop-blur-sm p-4">
-      {/* Login Card */}
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+    <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center p-4 font-sans">
+      <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center relative shadow-2xl animate-in fade-in zoom-in duration-300">
         
-        {/* Close Button (X) */}
-        <Link href="/" className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        {/* ปุ่มปิดมุมขวาบน */}
+        <Link href="/" className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition">
+          ✕
         </Link>
 
-        {/* Header */}
-        <div className="flex flex-col items-center text-center space-y-3 mb-8 mt-2">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">เข้าสู่ระบบ</h2>
-          <p className="text-gray-500">เพื่อสั่งซื้อสินค้าและติดตามสถานะ</p>
+        {/* โลโก้ */}
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-4">
-          {/* Facebook Button */}
-          <button className="w-full flex items-center justify-center gap-3 bg-[#1877F2] hover:bg-[#166FE5] text-white py-3.5 rounded-2xl font-medium transition text-lg">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            ดำเนินการต่อด้วย Facebook
-          </button>
+        <h1 className="text-2xl font-extrabold text-gray-900 mb-1">เข้าสู่ระบบ</h1>
+        <p className="text-sm text-gray-500 mb-8">เพื่อสั่งซื้อสินค้าและติดตามสถานะ</p>
 
-          {/* Apple Button */}
-          <button className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-800 text-white py-3.5 rounded-2xl font-medium transition text-lg">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.04 2.26-.7 3.58-.6 2.02.13 3.32 1.05 4.14 2.37-3.22 1.96-2.64 6.13.56 7.33-.76 1.8-1.74 3.55-3.36 3.07zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
-            ดำเนินการต่อด้วย Apple
-          </button>
-
-          {/* Divider */}
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">หรือ</span>
-            <div className="flex-grow border-t border-gray-200"></div>
+        {/* --- หน้าเมนูเลือกวิธีล็อกอิน --- */}
+        {view === "menu" && (
+          <div className="space-y-3">
+            <button 
+              onClick={() => setView("email")}
+              className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+              เข้าสู่ระบบด้วยอีเมล
+            </button>
+            <button 
+              onClick={() => setView("phone")}
+              className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-2xl font-bold flex items-center justify-center gap-3 transition"
+            >
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+              เข้าสู่ระบบด้วยเบอร์โทรศัพท์
+            </button>
           </div>
+        )}
 
-          {/* Email Button (เพิ่มใหม่ตามคำขอ) */}
-          <button className="w-full flex items-center justify-center gap-3 border border-gray-300 hover:bg-gray-50 text-gray-700 bg-white py-3.5 rounded-2xl font-medium transition text-lg shadow-sm">
-            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            เข้าสู่ระบบด้วยอีเมล
-          </button>
+        {/* --- หน้ากรอกอีเมล --- */}
+        {view === "email" && (
+          <form onSubmit={handleEmailLogin} className="space-y-4 text-left">
+            <div>
+              <label className="text-sm font-bold text-gray-700">อีเมล</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="example@email.com" />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-gray-700">รหัสผ่าน</label>
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="••••••••" />
+            </div>
+            <button type="submit" disabled={loading} className="w-full bg-[#0a4a2f] text-white py-3 rounded-xl font-bold hover:bg-[#073622] transition">
+              {loading ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ / สมัครสมาชิก"}
+            </button>
+            <button type="button" onClick={() => setView("menu")} className="w-full text-sm text-gray-500 py-2">← ย้อนกลับ</button>
+          </form>
+        )}
 
-          {/* Phone Button */}
-          <button className="w-full flex items-center justify-center gap-3 border border-gray-300 hover:bg-gray-50 text-gray-700 bg-white py-3.5 rounded-2xl font-medium transition text-lg shadow-sm">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-            เข้าสู่ระบบด้วยเบอร์โทรศัพท์
-          </button>
-        </div>
+        {/* --- หน้ากรอกเบอร์โทรศัพท์ --- */}
+        {view === "phone" && (
+          <form onSubmit={handlePhoneLogin} className="space-y-4 text-left">
+            <div>
+              <label className="text-sm font-bold text-gray-700">เบอร์โทรศัพท์ (ไม่ต้องใส่ขีด)</label>
+              <div className="flex mt-1">
+                <span className="inline-flex items-center px-4 bg-gray-100 border border-r-0 border-gray-300 rounded-l-xl text-gray-500 font-bold">+66</span>
+                <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-3 border border-gray-300 rounded-r-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" placeholder="0812345678" />
+              </div>
+            </div>
+            <button type="submit" disabled={loading} className="w-full bg-[#0a4a2f] text-white py-3 rounded-xl font-bold hover:bg-[#073622] transition">
+              {loading ? "กำลังส่งข้อความ..." : "รับรหัส OTP"}
+            </button>
+            <button type="button" onClick={() => setView("menu")} className="w-full text-sm text-gray-500 py-2">← ย้อนกลับ</button>
+          </form>
+        )}
+
+        {/* --- หน้ากรอกรหัส OTP --- */}
+        {view === "otp" && (
+          <form onSubmit={handleVerifyOtp} className="space-y-4 text-left">
+            <div>
+              <label className="text-sm font-bold text-gray-700">รหัส OTP 6 หลัก</label>
+              <input type="text" required value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-center tracking-widest text-xl" placeholder="123456" maxLength={6} />
+            </div>
+            <button type="submit" disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
+              {loading ? "กำลังตรวจสอบ..." : "ยืนยันรหัส OTP"}
+            </button>
+            <button type="button" onClick={() => setView("phone")} className="w-full text-sm text-gray-500 py-2">← เปลี่ยนเบอร์โทร</button>
+          </form>
+        )}
+
       </div>
     </div>
   );
