@@ -90,14 +90,34 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. Hero Section */}
-      <div className="relative w-full h-[350px] flex flex-col items-center justify-center text-white bg-[#0a4a2f]">
+      {/* 2. Hero Section (วิดีโอพื้นหลัง) */}
+      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden">
+        
+        {/* วิดีโอพื้นหลัง (ดึงไฟล์ hero-video.mp4 จากโฟลเดอร์ public) */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/hero-video.mp4" type="video/mp4" />
+        </video>
+
+        {/* แผ่นฟิล์มสีดำโปร่งแสง (Overlay) เพื่อให้วิดีโอมืดลงนิดนึง ตัวหนังสือจะได้เด่นขึ้น */}
+        <div className="absolute inset-0 bg-black/40"></div>
+
+        {/* เนื้อหาข้อความ */}
         <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
-          <div className="bg-white/20 text-[#f3c623] px-5 py-2 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-sm border border-[#f3c623]/50 font-bold shadow-lg">
+          <div className="bg-black/50 text-[#f3c623] px-6 py-2.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight drop-shadow-lg text-white">
+          {/* ชื่อหมู่บ้าน พร้อมเงาดำหนา (Text Shadow) ตัดกับวิดีโอ */}
+          <h1 
+            className="text-5xl md:text-7xl font-extrabold leading-tight text-white tracking-wide"
+            style={{ textShadow: "0px 4px 15px rgba(0, 0, 0, 0.9), 0px 2px 5px rgba(0, 0, 0, 0.7)" }}
+          >
             วิสาหกิจบ้านป่าตึงงาม<br/>หมู่ 18
           </h1>
         </div>
@@ -133,7 +153,6 @@ export default function HomePage() {
               <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md z-10">
                 พร้อมส่ง
               </div>
-              {/* แถบแจ้งเตือนเมื่อโฮเวอร์ที่รูป */}
               <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <span className="bg-white text-[#0a4a2f] font-bold px-4 py-2 rounded-full shadow-lg text-sm flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg> เพิ่มสินค้า
@@ -152,7 +171,6 @@ export default function HomePage() {
             <div className="flex items-center justify-between mt-4 px-1 pt-4 border-t border-gray-100">
               <p className="text-orange-600 font-extrabold text-2xl">฿{product.price} <span className="text-sm text-gray-500 font-normal">/ {product.unit}</span></p>
               
-              {/* ปุ่มรถเข็น (เพิ่มจำนวน) */}
               <button 
                 onClick={addToCart}
                 className="bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] p-3 rounded-full transition shadow-md hover:scale-105 z-10 relative"
@@ -184,7 +202,6 @@ export default function HomePage() {
 
             <div className="p-6">
               {!showPayment ? (
-                /* ---------------- หน้าตะกร้า ---------------- */
                 cartQty === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -222,16 +239,12 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
-                /* ---------------- หน้าที่อยู่และชำระเงิน ---------------- */
                 <div className="flex flex-col space-y-5">
-                  
-                  {/* ยอดเงิน */}
                   <div className="w-full flex justify-between items-end border-b border-gray-100 pb-3">
                     <span className="text-gray-500">ยอดที่ต้องชำระ:</span>
                     <span className="font-extrabold text-orange-600 text-2xl">฿{totalPrice}</span>
                   </div>
 
-                  {/* ฟอร์มที่อยู่ */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -246,7 +259,6 @@ export default function HomePage() {
                     />
                   </div>
 
-                  {/* ตัวเลือกวิธีชำระเงิน */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 mb-2 block">เลือกวิธีชำระเงิน</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -267,7 +279,6 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* แสดงรายละเอียดการชำระเงินตามที่เลือก */}
                   {paymentMethod === "qr" ? (
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center">
                       <div className="border-4 border-[#0a4a2f] p-2 rounded-xl bg-white shadow-sm mb-3">
@@ -290,7 +301,6 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  {/* ปุ่มยืนยัน */}
                   <div className="pt-2">
                     <button 
                       onClick={handleConfirmOrder}
