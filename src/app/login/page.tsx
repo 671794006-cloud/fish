@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = "https://grilvqiyczvdkfumxxqy.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaWx2cWl5Y3p2ZGtmdW14eHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzg2MTQsImV4cCI6MjA1NjgxNDYxNH0.exJpC3MioijzdXBHmFzIsInJ1ZmljZXVudnd1N2VwM2ZzZl5ISnJpZF9tMjAwcXVyeQxZ50T69q46aAXNSnltD4bEYf2QMn0.xot69q46aGz6SAXNsInJ1ZマイD4bEYf2QMn0"; 
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaWx2cWl5Y3p2ZGtmdW14cXF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDAwMgs5LCJleHAiOjIwODY1MTYwOTl9.xot69q46aGz6SAXNsIDu4BEyF2QmN0"; 
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // --- ฟังก์ชันล็อกอินด้วยอีเมล ---
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -39,12 +38,10 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // --- ฟังก์ชันขอรหัส OTP สำหรับเบอร์โทร ---
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const formattedPhone = "+66" + phone.replace(/^0/, "");
-    
     const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
     
     if (error) {
@@ -56,7 +53,6 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // --- ฟังก์ชันยืนยันรหัส OTP ---
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -79,7 +75,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center p-4 font-sans">
-      <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center relative shadow-2xl animate-in fade-in zoom-in duration-300">
+      <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center relative shadow-2xl">
         
         <Link href="/" className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition">
           ✕
@@ -115,11 +111,25 @@ export default function LoginPage() {
           <form onSubmit={handleEmailLogin} className="space-y-4 text-left">
             <div>
               <label className="text-sm font-bold text-gray-700">อีเมล</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="example@email.com" />
+              <input 
+                type="email" 
+                required 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" 
+                placeholder="example@email.com" 
+              />
             </div>
             <div>
               <label className="text-sm font-bold text-gray-700">รหัสผ่าน</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="••••••••" />
+              <input 
+                type="password" 
+                required 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" 
+                placeholder="••••••••" 
+              />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-[#0a4a2f] text-white py-3 rounded-xl font-bold hover:bg-[#073622] transition">
               {loading ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ / สมัครสมาชิก"}
@@ -131,7 +141,7 @@ export default function LoginPage() {
         {view === "phone" && (
           <form onSubmit={handlePhoneLogin} className="space-y-4 text-left">
             <div>
-              <label className="text-sm font-bold text-gray-700">เบอร์โทรศัพท์ (ไม่ต้องใส่ขีด)</label>
+              <label className="text-sm font-bold text-gray-700">เบอร์โทรศัพท์</label>
               <div className="flex mt-1">
                 <span className="inline-flex items-center px-4 bg-gray-100 border border-r-0 border-gray-300 rounded-l-xl text-gray-500 font-bold">+66</span>
                 <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-3 border border-gray-300 rounded-r-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 text-gray-900 font-medium" placeholder="0812345678" />
