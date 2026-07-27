@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Facebook, Mail, Phone, Apple, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -33,12 +33,10 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all">
-                <Facebook className="mr-2 h-4 w-4 text-blue-500" />
+              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all font-medium text-blue-400">
                 Facebook
               </Button>
-              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all">
-                <Apple className="mr-2 h-4 w-4" />
+              <Button variant="outline" className="bg-neutral-800/50 border-neutral-700 hover:bg-neutral-800 hover:text-white transition-all font-medium text-neutral-300">
                 Apple
               </Button>
             </div>
