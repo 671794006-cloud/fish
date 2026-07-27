@@ -14,11 +14,11 @@ export default function HomePage() {
     }
   }, []);
 
-  // --- สถานะระบบ ---
-  const [cartQty, setCartQty] = useState(0);
+  // --- สถานะระบบตะกร้า (อัปเกรดให้รองรับสินค้าหลายชิ้น) ---
+  const [cart, setCart] = useState<Record<number, number>>({}); 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null); // สำหรับเปิดป๊อปอัปรายละเอียด
   
   // ฟอร์มข้อมูลจัดส่ง
   const [fullName, setFullName] = useState("");
@@ -26,35 +26,81 @@ export default function HomePage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
 
-  // ข้อมูลสินค้า
-  const product = {
-    name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
-    vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
-    price: 150,
-    shippingFee: 40,
-    unit: "แพ็ค (500 กรัม)", 
-    image: "https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/cover_648a8ae1db991.jpg",
-    description: "ปลาสวายแดดเดียวเนื้อแน่น คัดสรรจากปลานิลและปลาสวายคุณภาพดี หมักด้วยสูตรโบราณตากแดดธรรมชาติในมุ้งอนามัย รสชาติกลมกล่อม ไม่เค็มจัด สะอาด ปลอดสารกันบูด",
-    details: [
-      { title: "น้ำหนักสุทธิ", value: "500 กรัม / แพ็คสุญญากาศ" },
-      { title: "ส่วนประกอบ", value: "เนื้อปลา 98%, เกลือบริสุทธิ์ไอโอดีน 2%" },
-      { title: "มาตรฐานรับรอง", value: "OTOP 5 ดาว / มผช. ชุมชนบ้านป่าตึงงาม" },
-      { title: "จุดเด่น", value: "เนื้อฟู นุ่ม ไม่เค็มจัด ไร้กลิ่นคาว ปราศจากสารเคมีและสารกันบูด" },
-    ],
-    cookingSteps: [
-      "ทอดด้วยน้ำมัน: ตั้งไฟปานกลาง ทอดประมาณ 3-5 นาที จนปลาเปลี่ยนเป็นสีเหลืองทองกรอบนอกนุ่มใน",
-      "ทอดด้วยหม้อทอดไร้น้ำมัน (Air Fryer): ตั้งอุณหภูมิ 180°C เป็นเวลา 10-12 นาที (พลิกกลับด้านในนาทีที่ 6)"
-    ],
-    storage: "แช่เย็นปกติเก็บได้ 1-2 สัปดาห์ / แช่แข็ง (Freezer -18°C) เก็บรักษาคุณภาพได้นานถึง 3-6 เดือน"
-  };
+  // --- ฐานข้อมูลสินค้าทั้งหมด ---
+  const products = [
+    {
+      id: 1,
+      name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
+      vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
+      price: 150,
+      unit: "แพ็ค (500 กรัม)", 
+      image: "https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/cover_648a8ae1db991.jpg",
+      description: "ปลาสวายแดดเดียวเนื้อแน่น คัดสรรจากปลานิลและปลาสวายคุณภาพดี หมักด้วยสูตรโบราณตากแดดธรรมชาติในมุ้งอนามัย รสชาติกลมกล่อม ไม่เค็มจัด สะอาด ปลอดสารกันบูด",
+      details: [
+        { title: "น้ำหนักสุทธิ", value: "500 กรัม / แพ็คสุญญากาศ" },
+        { title: "ส่วนประกอบ", value: "เนื้อปลา 98%, เกลือบริสุทธิ์ไอโอดีน 2%" },
+        { title: "มาตรฐานรับรอง", value: "OTOP 5 ดาว / มผช. ชุมชนบ้านป่าตึงงาม" },
+        { title: "จุดเด่น", value: "เนื้อฟู นุ่ม ไม่เค็มจัด ไร้กลิ่นคาว ปราศจากสารเคมีและสารกันบูด" },
+      ],
+      cookingSteps: [
+        "ทอดด้วยน้ำมัน: ตั้งไฟปานกลาง ทอดประมาณ 3-5 นาที จนปลาเปลี่ยนเป็นสีเหลืองทองกรอบนอกนุ่มใน",
+        "ทอดด้วยหม้อทอดไร้น้ำมัน (Air Fryer): ตั้งอุณหภูมิ 180°C เป็นเวลา 10-12 นาที (พลิกกลับด้านในนาทีที่ 6)"
+      ],
+      storage: "แช่เย็นปกติเก็บได้ 1-2 สัปดาห์ / แช่แข็ง (Freezer -18°C) เก็บรักษาคุณภาพได้นานถึง 3-6 เดือน"
+    },
+    {
+      id: 2,
+      name: "แหนมหมู วรรณภา เชียงราย",
+      vendor: "กลุ่มแปรรูปอาหาร วรรณภา",
+      price: 120, // สามารถปรับราคาได้ตามจริง
+      unit: "แท่ง (250 กรัม)", 
+      image: "/naem.jpg", // ดึงรูปจากโฟลเดอร์ public
+      description: "แหนมหมูสูตรต้นตำรับเชียงราย รสชาติเปรี้ยวพอดี อร่อย สะอาด ถูกหลักอนามัย ทำจากเนื้อหมูคุณภาพดี หมักด้วยวิธีธรรมชาติ ปราศจากสารเร่งปฏิกิริยา",
+      details: [
+        { title: "น้ำหนักสุทธิ", value: "250 กรัม / แท่ง" },
+        { title: "ส่วนประกอบ", value: "เนื้อหมู 80%, หนังหมู 10%, กระเทียมและเครื่องเทศ 10%" },
+        { title: "มาตรฐานรับรอง", value: "ของดีประจำจังหวัดเชียงราย" },
+        { title: "จุดเด่น", value: "เปรี้ยวธรรมชาติ เนื้อหมูแน่น ไม่ผสมแป้ง บรรจุในแพ็คเกจสะอาด" },
+      ],
+      cookingSteps: [
+        "รับประทานสด: หั่นเป็นชิ้นพอดีคำ ทานแกล้มกับพริกขี้หนูสด กระเทียม ถั่วลิสงคั่ว และกะหล่ำปลี",
+        "ประกอบอาหาร: นำไปทำยำแหนมแซ่บๆ, ข้าวผัดแหนม, หรือเจียวใส่ไข่ก็อร่อยกลมกล่อม"
+      ],
+      storage: "เก็บในตู้เย็นช่องธรรมดา (2-8°C) ได้นาน 1 เดือน หากชอบเปรี้ยวมากสามารถวางไว้อุณหภูมิห้อง 1-2 วันก่อนทาน"
+    }
+  ];
 
-  const addToCart = () => {
-    setCartQty((prev) => prev + 1);
+  // --- ฟังก์ชันตะกร้าสินค้า ---
+  const addToCart = (productId: number) => {
+    setCart((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1
+    }));
     setIsCartOpen(true);
   };
 
-  const subtotal = cartQty * product.price;
-  const grandTotal = cartQty > 0 ? subtotal + product.shippingFee : 0;
+  const updateQty = (productId: number, delta: number) => {
+    setCart((prev) => {
+      const newQty = (prev[productId] || 0) + delta;
+      if (newQty <= 0) {
+        const newCart = { ...prev };
+        delete newCart[productId];
+        return newCart;
+      }
+      return { ...prev, [productId]: newQty };
+    });
+  };
+
+  // คำนวณยอดเงิน
+  const cartItems = Object.entries(cart).map(([id, qty]) => {
+    const product = products.find(p => p.id === parseInt(id));
+    return { ...product!, qty };
+  });
+  
+  const totalItemsCount = cartItems.reduce((sum, item) => sum + item.qty, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const shippingFee = totalItemsCount > 0 ? 40 : 0; // เหมาจ่าย 40 บาท
+  const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
   const handleConfirmOrder = () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
@@ -62,15 +108,16 @@ export default function HomePage() {
       return;
     }
 
-    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${addressDetail}`;
+    const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
+    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${addressDetail}\n\nรายการสินค้า:\n${orderListText}`;
 
     if (paymentMethod === "qr") {
-      alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\nสถานที่จัดส่ง:\n${fullAddressText}`);
+      alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`);
     } else {
-      alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานขนส่งครับ\n\nสถานที่จัดส่ง:\n${fullAddressText}`);
+      alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานจัดส่ง (ในพื้นที่เชียงรายหรือขนส่งที่รองรับ) ครับ\n\n${fullAddressText}`);
     }
     
-    setCartQty(0);
+    setCart({});
     setFullName("");
     setPhone("");
     setAddressDetail("");
@@ -105,9 +152,9 @@ export default function HomePage() {
             className="relative flex items-center gap-2 text-gray-600 hover:text-[#0a4a2f] transition p-2"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            {cartQty > 0 && (
+            {totalItemsCount > 0 && (
               <span className="absolute 0 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
-                {cartQty}
+                {totalItemsCount}
               </span>
             )}
           </button>
@@ -147,105 +194,84 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 3. ส่วนแสดงสินค้าและรายละเอียด */}
+      {/* 3. ส่วนแสดงรายการสินค้าทั้งหมด */}
       <div id="products" className="max-w-7xl mx-auto px-6 mt-12">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
             <h2 className="text-3xl font-bold text-[#0a4a2f]">สินค้าแนะนำของชุมชน</h2>
-            <p className="text-gray-500 mt-2">แปรรูปปลาแดดเดียว สด สะอาด ปลอดภัย</p>
+            <p className="text-gray-500 mt-2">แปรรูปอาหารและหัตถกรรม สด สะอาด ปลอดภัย</p>
           </div>
         </div>
 
-        {/* การ์ดสินค้า */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-md transition duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            
-            <div className="md:col-span-5 relative aspect-[4/5] rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setIsDetailOpen(true)}>
-              <img 
-                src={product.image} 
-                alt="ปลาสวายแดดเดียว" 
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
-                onError={(e) => {
-                  e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop";
-                }}
-              />
-              <div className="absolute top-4 left-4 bg-green-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md">
-                สินค้าการันตี OTOP
-              </div>
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                <span className="bg-white/90 text-[#0a4a2f] px-4 py-2 rounded-full font-bold text-sm shadow-lg">🔍 คลิกเพื่อดูรายละเอียดเพิ่มเติม</span>
-              </div>
-            </div>
-
-            <div className="md:col-span-7 flex flex-col justify-between h-full space-y-6">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                    {product.vendor}
-                  </span>
-                  <span className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
-                    แพ็คสุญญากาศ
-                  </span>
+        {/* วนลูปแสดงการ์ดสินค้าทุกชิ้นในระบบ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {products.map((item) => (
+            <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
+                
+                {/* ฝั่งรูปภาพ */}
+                <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                  <img 
+                    src={item.image} 
+                    alt={item.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
+                    onError={(e) => {
+                      e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <span className="bg-white/90 text-[#0a4a2f] px-4 py-2 rounded-full font-bold text-xs shadow-lg">🔍 ดูรายละเอียด</span>
+                  </div>
                 </div>
 
-                <h3 className="text-3xl font-extrabold text-gray-900 mb-3">{product.name}</h3>
-                <p className="text-gray-600 leading-relaxed text-base mb-6">{product.description}</p>
+                {/* ฝั่งข้อมูล */}
+                <div className="sm:col-span-7 flex flex-col justify-between h-full space-y-4">
+                  <div>
+                    <span className="inline-block text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200 mb-2">
+                      {item.vendor}
+                    </span>
+                    <h3 className="text-xl font-extrabold text-gray-900 mb-2 line-clamp-2">{item.name}</h3>
+                    <p className="text-gray-500 text-sm line-clamp-3">{item.description}</p>
+                  </div>
 
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
-                  <h4 className="font-bold text-[#0a4a2f] text-sm flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    ข้อมูลจุดเด่นสินค้า
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    {product.details.map((item, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-100">
-                        <span className="text-gray-400 block text-xs">{item.title}</span>
-                        <span className="font-semibold text-gray-800">{item.value}</span>
-                      </div>
-                    ))}
+                  <div className="pt-4 border-t border-gray-100">
+                    <span className="text-xs text-gray-500 block mb-1">ราคาจำหน่าย</span>
+                    <p className="text-orange-600 font-extrabold text-2xl mb-3">
+                      ฿{item.price} <span className="text-sm font-normal text-gray-500">/ {item.unit}</span>
+                    </p>
+                    
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setSelectedProduct(item)}
+                        className="flex-1 border border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 py-2.5 rounded-xl font-bold text-sm transition"
+                      >
+                        รายละเอียด
+                      </button>
+                      <button 
+                        onClick={() => addToCart(item.id)}
+                        className="flex-1 bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-2.5 rounded-xl font-bold text-sm transition shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        ใส่ตะกร้า
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <span className="text-sm text-gray-500 block">ราคาจำหน่าย</span>
-                  <p className="text-orange-600 font-extrabold text-4xl">
-                    ฿{product.price} <span className="text-sm font-normal text-gray-500">/ {product.unit}</span>
-                  </p>
-                </div>
-
-                <div className="flex gap-3 w-full sm:w-auto">
-                  <button 
-                    onClick={() => setIsDetailOpen(true)}
-                    className="flex-1 sm:flex-none border border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 px-5 py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-2"
-                  >
-                    รายละเอียดเพิ่มเติม
-                  </button>
-                  <button 
-                    onClick={addToCart}
-                    className="flex-1 sm:flex-none bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] px-8 py-3.5 rounded-xl font-bold text-lg transition shadow-md flex items-center justify-center gap-2 hover:scale-105"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    สั่งซื้อลงตะกร้า
-                  </button>
-                </div>
-              </div>
-
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* --- Modal ป๊อปอัปรายละเอียดสินค้าเพิ่มเติม --- */}
-      {isDetailOpen && (
+      {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
             
             <div className="bg-[#0a4a2f] p-5 text-white flex justify-between items-center sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-[#f3c623]">รายละเอียดสินค้าเพิ่มเติม</h2>
+              <h2 className="text-xl font-bold text-[#f3c623]">รายละเอียดสินค้า</h2>
               <button 
-                onClick={() => setIsDetailOpen(false)}
+                onClick={() => setSelectedProduct(null)}
                 className="p-1 hover:bg-white/20 rounded-full transition text-white"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -253,43 +279,61 @@ export default function HomePage() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div>
-                <h3 className="font-bold text-lg text-[#0a4a2f] mb-2">{product.name}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{product.description}</p>
+              <div className="flex gap-4 items-start">
+                <img src={selectedProduct.image} className="w-24 h-24 object-cover rounded-xl border border-gray-200 shadow-sm" alt={selectedProduct.name} />
+                <div>
+                  <h3 className="font-bold text-xl text-[#0a4a2f] mb-1">{selectedProduct.name}</h3>
+                  <span className="text-xs font-bold text-[#0a4a2f] bg-green-50 px-2 py-0.5 rounded border border-green-200 inline-block mb-2">
+                    {selectedProduct.vendor}
+                  </span>
+                  <p className="text-gray-600 text-sm leading-relaxed">{selectedProduct.description}</p>
+                </div>
               </div>
 
-              <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
-                <h4 className="font-bold text-amber-900 text-sm mb-2 flex items-center gap-2">
-                  🍳 วิธีการทอด/รับประทาน
-                </h4>
-                <ul className="list-disc list-inside space-y-2 text-sm text-amber-800">
-                  {product.cookingSteps.map((step, idx) => (
-                    <li key={idx} className="leading-relaxed">{step}</li>
+              {/* ข้อมูลจำเพาะ */}
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <h4 className="font-bold text-[#0a4a2f] text-sm mb-3">ข้อมูลจำเพาะ</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  {selectedProduct.details.map((item: any, idx: number) => (
+                    <div key={idx} className="bg-white p-3 rounded-xl border border-gray-100">
+                      <span className="text-gray-400 block text-xs">{item.title}</span>
+                      <span className="font-semibold text-gray-800">{item.value}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
-                <h4 className="font-bold text-blue-900 text-sm mb-1 flex items-center gap-2">
-                  ❄️ วิธีการเก็บรักษา
-                </h4>
-                <p className="text-sm text-blue-800 leading-relaxed">{product.storage}</p>
+              {/* วิธีการทำ/เก็บรักษา */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                  <h4 className="font-bold text-amber-900 text-sm mb-2">🍳 วิธีการรับประทาน</h4>
+                  <ul className="list-disc list-inside space-y-1 text-xs text-amber-800">
+                    {selectedProduct.cookingSteps.map((step: string, idx: number) => (
+                      <li key={idx} className="leading-relaxed">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
+                  <h4 className="font-bold text-blue-900 text-sm mb-2">❄️ วิธีการเก็บรักษา</h4>
+                  <p className="text-xs text-blue-800 leading-relaxed">{selectedProduct.storage}</p>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
                 <button 
-                  onClick={() => setIsDetailOpen(false)}
-                  className="px-6 py-2.5 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50"
+                  onClick={() => setSelectedProduct(null)}
+                  className="px-6 py-2.5 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50 text-sm"
                 >
                   ปิดหน้านี้
                 </button>
                 <button 
                   onClick={() => {
-                    setIsDetailOpen(false);
-                    addToCart();
+                    addToCart(selectedProduct.id);
+                    setSelectedProduct(null);
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-[#0a4a2f] text-[#f3c623] font-bold hover:bg-[#073622]"
+                  className="px-6 py-2.5 rounded-xl bg-[#0a4a2f] text-[#f3c623] font-bold hover:bg-[#073622] text-sm flex items-center gap-2"
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                   เพิ่มลงตะกร้าเลย
                 </button>
               </div>
@@ -303,7 +347,6 @@ export default function HomePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
             
-            {/* Header Modal */}
             <div className="bg-[#0a4a2f] p-4 px-6 text-white flex justify-between items-center sticky top-0 z-20">
               <h2 className="text-xl font-bold text-[#f3c623] flex items-center gap-2">
                 {showPayment ? "📦 จัดส่งและชำระเงิน" : "🛒 ตะกร้าสินค้าของคุณ"}
@@ -318,39 +361,42 @@ export default function HomePage() {
 
             <div className="p-6">
               {!showPayment ? (
-                /* ---------------- 1. หน้าแสดงรายการสินค้าในตะกร้า ---------------- */
-                cartQty === 0 ? (
+                totalItemsCount === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     <p className="text-gray-500 text-lg">ยังไม่มีสินค้าในตะกร้า</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                      <div className="flex gap-4 items-center">
-                        <img src={product.image} alt="product" className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
-                        <div className="pr-2">
-                          <h3 className="font-bold text-[#0a4a2f] line-clamp-1">{product.name}</h3>
-                          <p className="text-sm text-orange-600 font-semibold mt-0.5">฿{product.price} / {product.unit}</p>
+                  <div className="space-y-4">
+                    {/* ลิสต์สินค้าทั้งหมดในตะกร้า */}
+                    <div className="max-h-[40vh] overflow-y-auto space-y-3 pr-2">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                          <div className="flex gap-3 items-center w-full">
+                            <img src={item.image} alt={item.name} className="w-14 h-14 object-cover rounded-xl border border-gray-200 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-[#0a4a2f] text-sm truncate">{item.name}</h3>
+                              <p className="text-xs text-orange-600 font-semibold mt-0.5">฿{item.price} / {item.unit}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm shrink-0 ml-2">
+                            <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">-</button>
+                            <span className="font-bold w-4 text-center text-sm">{item.qty}</span>
+                            <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">+</button>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2.5 py-1 shadow-sm shrink-0">
-                        <button onClick={() => setCartQty(cartQty - 1)} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">-</button>
-                        <span className="font-bold w-4 text-center">{cartQty}</span>
-                        <button onClick={() => setCartQty(cartQty + 1)} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">+</button>
-                      </div>
+                      ))}
                     </div>
                     
                     {/* สรุปราคาในตะกร้า */}
-                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-sm">
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-sm mt-4">
                       <div className="flex justify-between text-gray-600">
-                        <span>ราคาสินค้า ({cartQty} ชิ้น)</span>
+                        <span>ราคาสินค้ารวม ({totalItemsCount} ชิ้น)</span>
                         <span>฿{subtotal}</span>
                       </div>
                       <div className="flex justify-between text-gray-600">
-                        <span>ค่าจัดส่ง</span>
-                        <span>฿{product.shippingFee}</span>
+                        <span>ค่าจัดส่ง (เหมาจ่าย)</span>
+                        <span>฿{shippingFee}</span>
                       </div>
                       <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-base font-extrabold text-[#0a4a2f]">
                         <span>ยอดรวมสุทธิ</span>
@@ -367,10 +413,10 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
-                /* ---------------- 2. หน้าจัดส่งและชำระเงิน (มีรูปภาพสินค้าเพิ่มเข้ามา) ---------------- */
+                /* ---------------- 2. หน้าจัดส่งและชำระเงิน ---------------- */
                 <div className="space-y-6">
                   
-                  {/* สรุปรายการคำสั่งซื้อพร้อมรูปภาพสินค้า */}
+                  {/* สรุปรายการคำสั่งซื้อพร้อมรูปภาพสินค้า (รองรับหลายชิ้น) */}
                   <div className="bg-green-50/70 p-4 rounded-2xl border border-green-200 space-y-3">
                     <div className="flex items-center justify-between border-b border-green-200 pb-2">
                       <span className="font-bold text-[#0a4a2f] text-sm flex items-center gap-1.5">
@@ -378,41 +424,37 @@ export default function HomePage() {
                         รายการสินค้าที่สั่งซื้อ
                       </span>
                       <span className="text-xs font-bold text-green-700 bg-white px-2.5 py-0.5 rounded-full border border-green-200">
-                        {cartQty} แพ็ค
+                        {totalItemsCount} ชิ้น
                       </span>
                     </div>
 
-                    {/* การ์ดแสดงรูปภาพและชื่อสินค้า */}
-                    <div className="flex gap-3 items-center bg-white p-3 rounded-xl border border-green-100 shadow-sm">
-                      <img 
-                        src={product.image} 
-                        alt={product.name} 
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0" 
-                        onError={(e) => {
-                          e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop";
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-[#0a4a2f] text-sm truncate">{product.name}</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">{product.vendor}</p>
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-xs text-gray-600 font-medium">฿{product.price} x {cartQty}</span>
-                          <span className="font-extrabold text-orange-600 text-sm">฿{subtotal}</span>
+                    {/* รายการสินค้าที่ถูกสั่ง */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="flex gap-3 items-center bg-white p-2 rounded-xl border border-green-100 shadow-sm">
+                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-[#0a4a2f] text-xs truncate">{item.name}</h4>
+                            <div className="flex justify-between items-center mt-0.5">
+                              <span className="text-[10px] text-gray-500 font-medium">฿{item.price} x {item.qty}</span>
+                              <span className="font-extrabold text-orange-600 text-xs">฿{item.price * item.qty}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
 
                     {/* สรุปยอดเงินและค่าจัดส่ง */}
-                    <div className="space-y-1 text-xs text-gray-600 pt-1">
+                    <div className="space-y-1 text-xs text-gray-600 pt-2 border-t border-green-200/50">
                       <div className="flex justify-between">
                         <span>ราคาสินค้ารวม:</span>
                         <span className="font-semibold text-gray-800">฿{subtotal}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>ค่าบริการจัดส่ง:</span>
-                        <span className="font-semibold text-gray-800">฿{product.shippingFee}</span>
+                        <span className="font-semibold text-gray-800">฿{shippingFee}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-green-200 text-sm font-extrabold text-[#0a4a2f]">
+                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-green-200 text-sm font-extrabold text-[#0a4a2f]">
                         <span>ยอดชำระสุทธิ:</span>
                         <span className="text-xl text-orange-600">฿{grandTotal}</span>
                       </div>
