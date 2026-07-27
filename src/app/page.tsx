@@ -14,20 +14,24 @@ export default function HomePage() {
     }
   }, []);
 
-  // --- สถานะตะกร้าสินค้าและการสั่งซื้อ ---
+  // --- สถานะระบบ ---
   const [cartQty, setCartQty] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
-  const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("qr");
+  // ฟอร์มข้อมูลจัดส่ง
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressDetail, setAddressDetail] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("qr"); // 'qr' หรือ 'cod'
 
-  // ข้อมูลสินค้าปลาแดดเดียว
+  // ข้อมูลสินค้า
   const product = {
     name: "ปลาสวายแดดเดียว ตรา ๑ เดียว",
     vendor: "วิสาหกิจบ้านป่าตึงงาม หมู่ 18",
     price: 150,
+    shippingFee: 40, // ค่าจัดส่ง
     unit: "แพ็ค (500 กรัม)", 
     image: "https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/cover_648a8ae1db991.jpg",
     description: "ปลาสวายแดดเดียวเนื้อแน่น คัดสรรจากปลานิลและปลาสวายคุณภาพดี หมักด้วยสูตรโบราณตากแดดธรรมชาติในมุ้งอนามัย รสชาติกลมกล่อม ไม่เค็มจัด สะอาด ปลอดสารกันบูด",
@@ -49,22 +53,27 @@ export default function HomePage() {
     setIsCartOpen(true);
   };
 
-  const totalPrice = cartQty * product.price;
+  const subtotal = cartQty * product.price;
+  const grandTotal = cartQty > 0 ? subtotal + product.shippingFee : 0;
 
   const handleConfirmOrder = () => {
-    if (!address.trim()) {
-      alert("กรุณากรอกข้อมูลที่อยู่และเบอร์โทรศัพท์สำหรับจัดส่งด้วยครับ");
+    if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
+      alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
       return;
     }
 
+    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${addressDetail}`;
+
     if (paymentMethod === "qr") {
-      alert("ส่งหลักฐานสำเร็จ! ทางร้านจะรีบตรวจสอบยอดเงินและจัดส่งสินค้าครับ\nจัดส่งไปที่: " + address);
+      alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\nสถานที่จัดส่ง:\n${fullAddressText}`);
     } else {
-      alert("สั่งซื้อสำเร็จ! กรุณาเตรียมเงินสดชำระกับพนักงานส่งของครับ\nจัดส่งไปที่: " + address);
+      alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานขนส่งครับ\n\nสถานที่จัดส่ง:\n${fullAddressText}`);
     }
     
     setCartQty(0);
-    setAddress("");
+    setFullName("");
+    setPhone("");
+    setAddressDetail("");
     setIsCartOpen(false);
     setShowPayment(false);
   };
@@ -147,11 +156,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* การ์ดสินค้าแบบแสดงรายละเอียดครบถ้วน */}
+        {/* การ์ดสินค้า */}
         <div className="bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-md transition duration-300">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
             
-            {/* ฝั่งรูปภาพสินค้า */}
             <div className="md:col-span-5 relative aspect-[4/5] rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setIsDetailOpen(true)}>
               <img 
                 src={product.image} 
@@ -169,7 +177,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* ฝั่งรายละเอียดสินค้า */}
             <div className="md:col-span-7 flex flex-col justify-between h-full space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -184,7 +191,6 @@ export default function HomePage() {
                 <h3 className="text-3xl font-extrabold text-gray-900 mb-3">{product.name}</h3>
                 <p className="text-gray-600 leading-relaxed text-base mb-6">{product.description}</p>
 
-                {/* ตารางข้อมูลสินค้าแบบย่อ */}
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
                   <h4 className="font-bold text-[#0a4a2f] text-sm flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -201,7 +207,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* ส่วนราคาและปุ่มกดสั่งซื้อ */}
               <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                   <span className="text-sm text-gray-500 block">ราคาจำหน่าย</span>
@@ -293,18 +298,19 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* --- Modal ตะกร้าสินค้า และ ชำระเงิน --- */}
+      {/* --- Modal ตะกร้าสินค้า และ หน้าจัดส่ง/ชำระเงิน (ปรับปรุงใหม่) --- */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
+          <div className="bg-white w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
             
-            <div className="bg-[#0a4a2f] p-4 text-white flex justify-between items-center sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-[#f3c623]">
-                {showPayment ? "จัดส่งและชำระเงิน" : "ตะกร้าสินค้าของคุณ"}
+            {/* Header Modal */}
+            <div className="bg-[#0a4a2f] p-4 px-6 text-white flex justify-between items-center sticky top-0 z-20">
+              <h2 className="text-xl font-bold text-[#f3c623] flex items-center gap-2">
+                {showPayment ? "📦 จัดส่งและชำระเงิน" : "🛒 ตะกร้าสินค้าของคุณ"}
               </h2>
               <button 
                 onClick={() => { setIsCartOpen(false); setShowPayment(false); }}
-                className="p-1 hover:bg-white/20 rounded-full transition text-white"
+                className="p-1.5 hover:bg-white/20 rounded-full transition text-white"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
@@ -312,6 +318,7 @@ export default function HomePage() {
 
             <div className="p-6">
               {!showPayment ? (
+                /* ---------------- 1. หน้าแสดงรายการสินค้าในตะกร้า ---------------- */
                 cartQty === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -319,110 +326,164 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
                       <div className="flex gap-4 items-center">
-                        <img src={product.image} alt="product" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                        <img src={product.image} alt="product" className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
                         <div className="pr-2">
                           <h3 className="font-bold text-[#0a4a2f] line-clamp-1">{product.name}</h3>
-                          <p className="text-sm text-orange-600 font-semibold mt-1">฿{product.price} / {product.unit}</p>
+                          <p className="text-sm text-orange-600 font-semibold mt-0.5">฿{product.price} / {product.unit}</p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm shrink-0">
-                        <button onClick={() => setCartQty(cartQty - 1)} className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">-</button>
+                      <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2.5 py-1 shadow-sm shrink-0">
+                        <button onClick={() => setCartQty(cartQty - 1)} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">-</button>
                         <span className="font-bold w-4 text-center">{cartQty}</span>
-                        <button onClick={() => setCartQty(cartQty + 1)} className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">+</button>
+                        <button onClick={() => setCartQty(cartQty + 1)} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold text-lg">+</button>
                       </div>
                     </div>
                     
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                      <span className="font-bold text-gray-600">ยอดรวมทั้งสิ้น</span>
-                      <span className="font-extrabold text-3xl text-orange-600">฿{totalPrice}</span>
+                    {/* สรุปราคาในตะกร้า */}
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-sm">
+                      <div className="flex justify-between text-gray-600">
+                        <span>ราคาสินค้า ({cartQty} ชิ้น)</span>
+                        <span>฿{subtotal}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>ค่าจัดส่ง</span>
+                        <span>฿{product.shippingFee}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-base font-extrabold text-[#0a4a2f]">
+                        <span>ยอดรวมสุทธิ</span>
+                        <span className="text-2xl text-orange-600">฿{grandTotal}</span>
+                      </div>
                     </div>
 
                     <button 
                       onClick={() => setShowPayment(true)}
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-bold text-lg transition shadow-md flex justify-center items-center gap-2"
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-2xl font-bold text-lg transition shadow-md flex justify-center items-center gap-2"
                     >
-                      ดำเนินการชำระเงิน <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                      ดำเนินการจัดส่งและชำระเงิน <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                   </div>
                 )
               ) : (
-                <div className="flex flex-col space-y-5">
-                  <div className="w-full flex justify-between items-end border-b border-gray-100 pb-3">
-                    <span className="text-gray-500">ยอดที่ต้องชำระ:</span>
-                    <span className="font-extrabold text-orange-600 text-2xl">฿{totalPrice}</span>
+                /* ---------------- 2. หน้าจัดส่งและชำระเงิน (ปรับสไตล์ตามแอปช้อปปิ้ง) ---------------- */
+                <div className="space-y-6">
+                  
+                  {/* สรุปรายการคำสั่งซื้อ */}
+                  <div className="bg-green-50/70 p-4 rounded-2xl border border-green-200 space-y-2">
+                    <div className="flex items-center justify-between border-b border-green-200 pb-2">
+                      <span className="font-bold text-[#0a4a2f] text-sm flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 11h14l1 12H4L5 11z"></path></svg>
+                        รายการสินค้า ({cartQty} แพ็ค)
+                      </span>
+                      <span className="font-bold text-[#0a4a2f]">{product.name}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-600 pt-1">
+                      <span>ราคาสินค้า: ฿{subtotal} | ค่าจัดส่ง: ฿{product.shippingFee}</span>
+                      <span className="font-extrabold text-orange-600 text-sm">ยอดสุทธิ: ฿{grandTotal}</span>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      ที่อยู่สำหรับจัดส่ง
-                    </label>
+                  {/* ฟอร์มที่อยู่จัดส่ง */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                      ระบุข้อมูลผู้รับสินค้า
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input 
+                        type="text" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="ชื่อ-นามสกุล ผู้รับ *"
+                        className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                      />
+                      <input 
+                        type="tel" 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="เบอร์โทรศัพท์ *"
+                        className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                      />
+                    </div>
+
                     <textarea 
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      rows={3}
-                      className="w-full mt-2 p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                      placeholder="กรอกชื่อ-นามสกุล, บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์ และเบอร์โทรศัพท์..."
+                      value={addressDetail}
+                      onChange={(e) => setAddressDetail(e.target.value)}
+                      rows={2}
+                      className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                      placeholder="ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-sm font-bold text-gray-700 mb-2 block">เลือกวิธีชำระเงิน</label>
+                  {/* เลือกวิธีชำระเงิน */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      วิธีชำระเงิน
+                    </h3>
+
                     <div className="grid grid-cols-2 gap-3">
                       <button 
                         onClick={() => setPaymentMethod("qr")}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-600 text-[#0a4a2f] ring-2 ring-green-600/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
                       >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                        <span className="text-sm font-bold">โอนเงิน (QR)</span>
+                        <span className="text-xs font-bold">โอนเงิน / QR Code</span>
                       </button>
+
                       <button 
                         onClick={() => setPaymentMethod("cod")}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-700 ring-1 ring-orange-500" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-800 ring-2 ring-orange-500/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
                       >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span className="text-sm font-bold">เก็บเงินปลายทาง</span>
+                        <span className="text-xs font-bold">เก็บเงินปลายทาง (COD)</span>
                       </button>
                     </div>
                   </div>
 
+                  {/* รายละเอียดการชำระเงินตามวิธีที่เลือก */}
                   {paymentMethod === "qr" ? (
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center">
-                      <div className="border-4 border-[#0a4a2f] p-2 rounded-xl bg-white shadow-sm mb-3">
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 flex flex-col items-center space-y-3">
+                      <div className="bg-white p-3 rounded-2xl border-2 border-[#0a4a2f] shadow-sm text-center">
                         <img 
                           src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" 
                           alt="Thai QR Payment" 
-                          className="w-48 h-auto object-contain rounded-lg"
+                          className="w-48 h-auto object-contain mx-auto rounded-lg mb-2"
                         />
+                        <p className="text-xs text-gray-500">สแกน QR PromptPay เพื่อโอนเงิน</p>
                       </div>
-                      <p className="text-sm text-gray-500">สแกน QR เพื่อโอนเข้าบัญชี</p>
-                      <p className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</p>
+
+                      <div className="w-full bg-white p-3 rounded-xl border border-gray-200 text-center text-xs space-y-1">
+                        <p className="text-gray-500">ชื่อบัญชี: <span className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</span></p>
+                        <p className="text-gray-500">ยอดที่ต้องโอน: <span className="font-extrabold text-orange-600 text-base">฿{grandTotal}</span></p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 flex flex-col items-center text-center space-y-2">
-                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-1">
+                    <div className="bg-orange-50 p-5 rounded-2xl border border-orange-200 text-center space-y-2">
+                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-1">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                       </div>
-                      <p className="font-bold text-orange-800">เตรียมเงินสดไว้ชำระกับพนักงานส่งของ</p>
-                      <p className="text-sm text-orange-600">เมื่อสินค้าส่งถึงหน้าบ้านคุณ</p>
+                      <p className="font-bold text-orange-900 text-sm">บริการเก็บเงินปลายทาง</p>
+                      <p className="text-xs text-orange-700">เตรียมเงินสด <span className="font-bold text-orange-900 text-sm">฿{grandTotal}</span> ไว้ชำระกับพนักงานจัดส่งเมื่อสินค้าถึงมือคุณ</p>
                     </div>
                   )}
 
-                  <div className="pt-2">
+                  {/* ปุ่มยืนยันสั่งซื้อ */}
+                  <div className="space-y-2 pt-2">
                     <button 
                       onClick={handleConfirmOrder}
-                      className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3.5 rounded-xl font-bold text-lg transition shadow-md"
+                      className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3.5 rounded-2xl font-bold text-lg transition shadow-md flex justify-center items-center gap-2"
                     >
-                      {paymentMethod === "qr" ? "แจ้งชำระเงิน / แนบสลิป" : "ยืนยันการสั่งซื้อ (เก็บเงินปลายทาง)"}
+                      {paymentMethod === "qr" ? "ยืนยันการโอนเงิน / แจ้งชำระเงิน" : "ยืนยันการสั่งซื้อปลายทาง"}
                     </button>
                     <button 
                       onClick={() => setShowPayment(false)}
-                      className="w-full text-center text-sm text-gray-500 hover:text-gray-800 mt-4 block"
+                      className="w-full text-center text-xs text-gray-500 hover:text-gray-800 py-2 block"
                     >
-                      ย้อนกลับไปแก้ไขตะกร้า
+                      ← ย้อนกลับไปแก้ไขตะกร้าสินค้า
                     </button>
                   </div>
 
