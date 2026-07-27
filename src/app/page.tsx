@@ -1,98 +1,71 @@
-"use client";
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, ShoppingCart, Image as ImageIcon } from "lucide-react";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="min-h-screen bg-neutral-950 text-white selection:bg-blue-500/30">
-      {/* Navigation */}
-      <nav className="fixed w-full z-50 top-0 border-b border-white/5 bg-neutral-950/50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="font-bold text-xl tracking-tighter flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">🐟</span>
-            ชุมชนปลาแดดเดียว
+    <div className="min-h-screen bg-white text-gray-800">
+      {/* Navbar */}
+      <nav className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        {/* Logo */}
+        <div className="flex items-center gap-2 text-green-700 font-bold text-xl">
+          <div className="bg-green-600 text-white w-8 h-8 flex items-center justify-center rounded-lg">
+            O
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" className="hover:bg-white/10 hover:text-white">เข้าสู่ระบบ</Button>
-            </Link>
-            <Button className="bg-white text-black hover:bg-neutral-200 rounded-full px-6 font-medium">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              ตะกร้า (0)
-            </Button>
-          </div>
+          O-TOPLocal
+        </div>
+
+        {/* Search Bar */}
+        <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
+          <input
+            type="text"
+            placeholder="ค้นหาสินค้า อาหาร ของใช้..."
+            className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+
+        {/* Menus & Login */}
+        <div className="flex items-center gap-6 text-sm font-medium">
+          <button className="flex items-center gap-2 hover:text-green-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            จัดการสินค้า
+          </button>
+          <button className="flex items-center gap-2 hover:text-green-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          </button>
+          <Link href="/login" className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2.5 rounded-full hover:bg-green-100 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            สมาชิกชุมชน
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* Abstract Background Elements */}
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob"></div>
-        <div className="absolute top-1/3 right-10 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob animation-delay-2000"></div>
-
-        <div className="max-w-7xl mx-auto relative z-10 grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="flex flex-col gap-6"
-          >
-            <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium w-fit">
-              <span className="flex h-2 w-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
-              ของดีประจำชุมชน ส่งตรงถึงบ้านคุณ
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1]">
-              ปลาแดดเดียว <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                สูตรลับเฉพาะชุมชน
-              </span>
-            </h1>
-            
-            <p className="text-lg text-neutral-400 max-w-lg leading-relaxed">
-              สัมผัสรสชาติความอร่อยที่สืบทอดกันมาอย่างยาวนาน ทำสดใหม่ทุกวัน สะอาด ปลอดภัย ไร้สารกันบูด พร้อมจัดส่งถึงหน้าบ้านคุณแล้ววันนี้
-            </p>
-            
-            <div className="flex flex-wrap items-center gap-4 pt-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 h-14 text-base shadow-[0_0_30px_-5px_rgba(37,99,235,0.4)]">
-                สั่งซื้อเลย <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Video / Image Showcase */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="relative"
-          >
-            <div className="aspect-[4/5] md:aspect-square rounded-3xl overflow-hidden border border-white/10 bg-neutral-900 relative shadow-2xl">
-              {/* Fallback pattern while video is loading/missing */}
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-              
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-500">
-                <ImageIcon className="h-16 w-16 mb-4 opacity-50" />
-                <p>พื้นที่สำหรับรูปภาพสินค้า</p>
-                <p className="text-sm">(ดึงจาก Supabase Storage)</p>
-              </div>
-
-              {/* Glassmorphism Price Tag */}
-              <div className="absolute bottom-6 left-6 right-6 backdrop-blur-xl bg-black/40 border border-white/10 p-6 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="text-neutral-300 text-sm mb-1">ราคาเริ่มต้นเพียง</p>
-                  <p className="text-3xl font-bold text-white">฿150 <span className="text-base font-normal text-neutral-400">/ กก.</span></p>
-                </div>
-                <Button className="bg-white text-black hover:bg-neutral-200 rounded-full h-12 px-6 font-bold text-base shadow-lg hover:scale-105 transition-transform">
-                  เพิ่มลงตะกร้า
-                </Button>
-              </div>
-            </div>
-          </motion.div>
+      <div 
+        className="relative w-full h-[550px] bg-cover bg-center flex flex-col items-center justify-center text-white" 
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?q=80&w=2070&auto=format&fit=crop')" }} // เปลี่ยนรูปพื้นหลังตรงนี้ได้
+      >
+        <div className="absolute inset-0 bg-black/60"></div> {/* เงาดำทับรูป */}
+        
+        <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
+          <div className="bg-green-800/80 text-green-100 px-4 py-1.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-sm">
+            ⭐ สินค้าคุณภาพจากมือชุมชน สู่มือคุณ
+          </div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold leading-tight">
+            อุดหนุนสินค้าท้องถิ่น<br/>สร้างรายได้ยั่งยืนสู่ชุมชน
+          </h1>
+          
+          <p className="text-gray-200 text-lg md:text-xl">
+            เลือกซื้อของดี ของอร่อย งานคราฟต์ทำมือ จากชาวบ้านโดยตรง มั่นใจได้ในคุณภาพ<br/>พร้อมเรื่องราวในทุกชิ้นงาน
+          </p>
+          
+          <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-full font-semibold mt-4 flex items-center gap-2 transition text-lg">
+            ช้อปเลยตอนนี้ <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+          </button>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
