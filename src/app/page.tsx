@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function HomePage() {
-  // --- ตัวอ้างอิงวิดีโอเพื่อแก้บั๊ก Autoplay ---
+  // --- ตัวอ้างอิงวิดีโอเพื่อบังคับให้เล่นอัตโนมัติ (แก้บั๊กเบราว์เซอร์) ---
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -22,8 +22,9 @@ export default function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   
+  // สถานะฟอร์มที่อยู่และวิธีชำระเงิน
   const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("qr");
+  const [paymentMethod, setPaymentMethod] = useState("qr"); // 'qr' = โอนเงิน, 'cod' = ปลายทาง
 
   // ข้อมูลสินค้า
   const product = {
@@ -41,6 +42,7 @@ export default function HomePage() {
 
   const totalPrice = cartQty * product.price;
 
+  // ฟังก์ชันยืนยันการสั่งซื้อ
   const handleConfirmOrder = () => {
     if (!address.trim()) {
       alert("กรุณากรอกข้อมูลที่อยู่และเบอร์โทรศัพท์สำหรับจัดส่งด้วยครับ");
@@ -53,6 +55,7 @@ export default function HomePage() {
       alert("สั่งซื้อสำเร็จ! กรุณาเตรียมเงินสดชำระกับพนักงานส่งของครับ\nจัดส่งไปที่: " + address);
     }
     
+    // เคลียร์ตะกร้าเมื่อสั่งซื้อเสร็จ
     setCartQty(0);
     setAddress("");
     setIsCartOpen(false);
@@ -100,9 +103,10 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. Hero Section (วิดีโอพื้นหลังพร้อมสั่งให้ Play ผ่าน Ref) */}
+      {/* 2. Hero Section (วิดีโอพื้นหลังดึงจาก Supabase) */}
       <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-black">
         
+        {/* ใช้ลิงก์วิดีโอจาก Supabase ของคุณโดยตรง */}
         <video 
           ref={videoRef}
           autoPlay 
@@ -111,11 +115,13 @@ export default function HomePage() {
           playsInline 
           className="absolute inset-0 w-full h-full object-cover"
         >
-          <source src="/hero-video.mp4" type="video/mp4" />
+          <source src="https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/hero-video.mp4" type="video/mp4" />
         </video>
 
+        {/* แผ่นฟิล์มสีดำโปร่งแสง (Overlay) เพื่อให้วิดีโอมืดลงนิดนึง ตัวหนังสือจะได้เด่นขึ้น */}
         <div className="absolute inset-0 bg-black/40"></div>
 
+        {/* เนื้อหาข้อความ */}
         <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
           <div className="bg-black/50 text-[#f3c623] px-6 py-2.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
@@ -139,9 +145,11 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* การ์ดสินค้า */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div className="group bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-xl transition duration-300 relative">
             
+            {/* พื้นที่รูปภาพ (คลิกเพื่อเพิ่มลงตะกร้าได้) */}
             <div 
               onClick={addToCart}
               title="คลิกรูปภาพเพื่อเพิ่มลงตะกร้า"
@@ -207,6 +215,7 @@ export default function HomePage() {
 
             <div className="p-6">
               {!showPayment ? (
+                /* ---------------- หน้าตะกร้า ---------------- */
                 cartQty === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -244,12 +253,16 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
+                /* ---------------- หน้าที่อยู่และชำระเงิน ---------------- */
                 <div className="flex flex-col space-y-5">
+                  
+                  {/* ยอดเงิน */}
                   <div className="w-full flex justify-between items-end border-b border-gray-100 pb-3">
                     <span className="text-gray-500">ยอดที่ต้องชำระ:</span>
                     <span className="font-extrabold text-orange-600 text-2xl">฿{totalPrice}</span>
                   </div>
 
+                  {/* ฟอร์มที่อยู่ */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -264,6 +277,7 @@ export default function HomePage() {
                     />
                   </div>
 
+                  {/* ตัวเลือกวิธีชำระเงิน */}
                   <div>
                     <label className="text-sm font-bold text-gray-700 mb-2 block">เลือกวิธีชำระเงิน</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -275,16 +289,4 @@ export default function HomePage() {
                         <span className="text-sm font-bold">โอนเงิน (QR)</span>
                       </button>
                       <button 
-                        onClick={() => setPaymentMethod("cod")}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-700 ring-1 ring-orange-500" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span className="text-sm font-bold">เก็บเงินปลายทาง</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {paymentMethod === "qr" ? (
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center">
-                      <div className="border-4 border-[#0a4a2f] p-2 rounded-xl bg-white shadow-sm mb-3">
-                        <img
+                        onClick={()
