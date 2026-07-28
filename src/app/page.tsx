@@ -259,7 +259,7 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 🔍 ช่องค้นหาสินค้า (อัปเดตระบบ Dropdown & Enter) */}
+        {/* 🔍 ช่องค้นหาสินค้า */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             ref={searchInputRef}
@@ -267,12 +267,11 @@ export default function HomePage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} // หน่วงเวลาเล็กน้อยเพื่อให้กดคลิกสินค้าใน Dropdown ทัน
+            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                searchInputRef.current?.blur(); // หุบแป้นพิมพ์มือถือ
-                setIsSearchFocused(false); // ปิด Dropdown
-                // เลื่อนหน้าจอลงไปที่ส่วนแสดงสินค้า
+                searchInputRef.current?.blur();
+                setIsSearchFocused(false);
                 document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
               }
             }}
@@ -281,7 +280,7 @@ export default function HomePage() {
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
-          {/* 🔽 Dropdown แสดงผลลัพธ์การค้นหาใต้ช่องค้นหาทันที */}
+          {/* 🔽 Dropdown แสดงผลลัพธ์ */}
           {searchQuery && isSearchFocused && (
             <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] max-h-[50vh] overflow-y-auto">
               {filteredProducts.length > 0 ? (
@@ -290,7 +289,7 @@ export default function HomePage() {
                     key={item.id} 
                     onClick={() => {
                       setSelectedProduct(item);
-                      setSearchQuery(""); // เคลียร์ช่องค้นหาเมื่อกดเลือก
+                      setSearchQuery("");
                     }}
                     className="flex items-center gap-3 p-3 hover:bg-green-50 cursor-pointer border-b border-gray-50 last:border-0 transition"
                   >
@@ -344,7 +343,9 @@ export default function HomePage() {
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
-                  <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                  
+                  {/* ✅ ปรับสัดส่วนรูปภาพตรงนี้ ให้บนมือถือเป็นแนวนอน (aspect-video) และบนคอมเป็นจัตุรัส */}
+                  <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                       <span className="bg-white/90 text-[#0a4a2f] px-4 py-2 rounded-full font-bold text-xs shadow-lg">🔍 ดูรายละเอียด</span>
