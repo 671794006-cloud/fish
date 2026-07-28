@@ -153,7 +153,7 @@ export default function HomePage() {
       return;
     }
 
-    // 🔴 ใส่ URL ของ Google Apps Script ตรงนี้นะครับ
+    // ✅ ลิงก์ Google Sheets ของคุณ (ใส่ไว้ให้แล้ว!)
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
@@ -230,7 +230,7 @@ export default function HomePage() {
             onClick={() => { setIsCartOpen(true); setShowPayment(false); }}
             className="relative flex items-center gap-2 text-gray-600 hover:text-[#0a4a2f] transition p-1 md:p-2"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 100-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             {totalItemsCount > 0 && (
               <span className="absolute 0 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
                 {totalItemsCount}
@@ -252,8 +252,8 @@ export default function HomePage() {
           )}
         </div>
 
-      {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
-        <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-2 md:mt-0">
+        {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
+        <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             type="text"
             placeholder="ค้นหาสินค้า อาหาร ของใช้..."
