@@ -16,7 +16,6 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // สถานะสำหรับเก็บข้อมูลออเดอร์
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
@@ -33,7 +32,6 @@ export default function AccountPage() {
           setAddressDetail(meta.addressDetail || "");
         }
 
-        // ดึงประวัติการสั่งซื้อจาก Supabase
         const { data: orderData } = await supabase
           .from('orders')
           .select('*')
@@ -61,6 +59,28 @@ export default function AccountPage() {
       alert("✅ บันทึกข้อมูลที่อยู่สำเร็จ!");
     }
     setSaving(false);
+  };
+
+  // --- ฟังก์ชันยกเลิกคำสั่งซื้อ ---
+  const handleCancelOrder = async (orderId: number) => {
+    const confirmCancel = window.confirm("คุณแน่ใจหรือไม่ที่จะยกเลิกคำสั่งซื้อนี้?");
+    if (!confirmCancel) return;
+
+    // อัปเดตสถานะใน Supabase
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'ยกเลิกแล้ว' })
+      .eq('id', orderId);
+
+    if (error) {
+      alert("เกิดข้อผิดพลาดในการยกเลิก: " + error.message);
+    } else {
+      alert("✅ ยกเลิกคำสั่งซื้อสำเร็จ");
+      // อัปเดตข้อมูลบนหน้าจอทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: 'ยกเลิกแล้ว' } : order
+      ));
+    }
   };
 
   const handleLogout = async () => {
@@ -119,7 +139,7 @@ export default function AccountPage() {
             </form>
           </div>
 
-          {/* ฝั่งขวา: ประวัติคำสั่งซื้อ (UI ตามภาพตัวอย่าง) */}
+          {/* ฝั่งขวา: ประวัติคำสั่งซื้อ */}
           <div className="lg:col-span-8 space-y-4">
              <h2 className="text-xl font-bold text-[#0a4a2f] flex items-center gap-2 mb-2">
               <svg className="w-6 h-6 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 11h14l1 12H4L5 11z"></path></svg>
@@ -135,22 +155,22 @@ export default function AccountPage() {
                 </Link>
               </div>
             ) : (
-              // ลูปแสดงประวัติออเดอร์แต่ละบิล
               orders.map((order, index) => (
                 <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   
-                  {/* หัวบิล: ชื่อร้าน และ สถานะ */}
+                  {/* หัวบิล */}
                   <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center gap-2 font-bold text-gray-800">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                       วิสาหกิจบ้านป่าตึงงาม
                     </div>
-                    <div className="text-green-600 font-semibold text-sm">
+                    {/* เปลี่ยนสีตัวหนังสือตามสถานะ */}
+                    <div className={`font-semibold text-sm ${order.status === 'ยกเลิกแล้ว' ? 'text-red-500' : 'text-orange-500'}`}>
                       {order.status}
                     </div>
                   </div>
 
-                  {/* รายการสินค้าในบิลนั้นๆ */}
+                  {/* รายการสินค้า */}
                   <div className="p-4 space-y-4">
                     {order.items.map((item: any, i: number) => (
                       <div key={i} className="flex gap-4">
@@ -172,7 +192,18 @@ export default function AccountPage() {
                     <div className="text-gray-800 font-medium">
                       ยอดรวม: <span className="text-xl font-bold text-[#ee4d2d]">฿{order.total_price}</span>
                     </div>
+                    
                     <div className="flex gap-3 mt-1">
+                      {/* ปุ่มยกเลิก จะโชว์เฉพาะออเดอร์ที่ยัง รอดำเนินการ */}
+                      {order.status === 'รอดำเนินการ' && (
+                        <button 
+                          onClick={() => handleCancelOrder(order.id)}
+                          className="px-6 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-[4px] hover:bg-gray-50 hover:text-red-500 transition shadow-sm text-sm"
+                        >
+                          ยกเลิกคำสั่งซื้อ
+                        </button>
+                      )}
+
                       <Link href="/" className="px-6 py-2 bg-[#ee4d2d] text-white font-bold rounded-[4px] hover:bg-[#d73f22] transition shadow-sm text-sm">
                         ซื้ออีกครั้ง
                       </Link>
