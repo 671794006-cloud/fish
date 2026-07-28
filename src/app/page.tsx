@@ -144,16 +144,16 @@ export default function HomePage() {
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
+  // --- ระบบส่งข้อมูลเข้า Google Sheets ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
       return;
     }
 
-    // 1. ใส่ URL ของ Google Apps Script ที่ก๊อปปี้มาตรงนี้
+    // 🔴 เอา URL ของ Google Apps Script มาใส่ตรงนี้นะครับ
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzaZiJ4cMds2Q73Oc0TDj7JbSlUptaGQRWP3Jho3kCQ8-SSD93VINxS5X26M0hgcVi8/exec";
 
-    // แสดงแจ้งเตือนกำลังโหลด
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
 
     const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
@@ -161,10 +161,9 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets
       await fetch(scriptUrl, {
         method: "POST",
-        mode: "no-cors", // จำเป็นต้องใส่ เพื่อไม่ให้เบราว์เซอร์บล็อกการส่งข้อมูลข้ามโดเมน
+        mode: "no-cors",
         headers: {
           "Content-Type": "application/json",
         },
@@ -178,14 +177,12 @@ export default function HomePage() {
         }),
       });
 
-      // 3. เมื่อส่งข้อมูลสำเร็จ
       if (paymentMethod === "qr") {
         alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`);
       } else {
         alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานจัดส่งครับ\n\n${fullAddressText}`);
       }
       
-      // ล้างตะกร้า ปิดหน้าต่าง
       setCart({});
       setIsCartOpen(false);
       setShowPayment(false);
@@ -193,21 +190,6 @@ export default function HomePage() {
     } catch (error) {
       alert("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้งครับ");
     }
-  };
-    }
-
-    const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
-    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${addressDetail}\n\nรายการสินค้า:\n${orderListText}`;
-
-    if (paymentMethod === "qr") {
-      alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`);
-    } else {
-      alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานจัดส่งครับ\n\n${fullAddressText}`);
-    }
-    
-    setCart({});
-    setIsCartOpen(false);
-    setShowPayment(false);
   };
 
   return (
