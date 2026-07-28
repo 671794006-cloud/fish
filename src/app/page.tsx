@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [user, setUser] = useState<any>(null); // เก็บข้อมูลผู้ใช้ที่ล็อกอิน
+  const [user, setUser] = useState<any>(null);
 
   // --- สถานะระบบตะกร้า ---
   const [cart, setCart] = useState<Record<number, number>>({}); 
@@ -19,7 +19,6 @@ export default function HomePage() {
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [toastMessage, setToastMessage] = useState(""); 
-  const [searchQuery, setSearchQuery] = useState("");
   
   // ฟอร์มข้อมูลจัดส่ง
   const [fullName, setFullName] = useState("");
@@ -27,16 +26,14 @@ export default function HomePage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
 
-  // โหลดข้อมูลผู้ใช้เมื่อเปิดหน้าเว็บ
+  // โหลดข้อมูลผู้ใช้
   useEffect(() => {
-    // โหลดวิดีโอ
     if (videoRef.current) {
       videoRef.current.defaultMuted = true;
       videoRef.current.muted = true;
       videoRef.current.play().catch(() => {});
     }
 
-    // เช็กการล็อกอินและดึงข้อมูลที่อยู่มาใส่ฟอร์มอัตโนมัติ
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -51,7 +48,6 @@ export default function HomePage() {
     };
     checkUser();
 
-    // ติดตามสถานะหากมีการล็อกอิน/ล็อกเอาต์แบบเรียลไทม์
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
@@ -144,14 +140,8 @@ export default function HomePage() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
- // ระบบกรองสินค้าจากคำค้นหา
-  const filteredProducts = products.filter((product) => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
-// --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
+  // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
@@ -173,26 +163,22 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 1. บันทึกลง Supabase และขอข้อมูลกลับมาเพื่อเอา ID ของออเดอร์
-      const { data: orderData, error: dbError } = await supabase.from('orders').insert({
+      // 1. บันทึกลง Supabase (เพื่อให้โชว์ในหน้าประวัติ)
+      const { error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
         total_price: grandTotal,
         status: 'รอดำเนินการ'
-      }).select(); // <-- เพิ่ม select() ตรงนี้
+      });
 
       if (dbError) throw dbError;
-      
-      const newOrderId = orderData[0].id; // ได้รหัสออเดอร์มาแล้ว!
 
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets 
+      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (เพื่อเอาไปแพ็คของ)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "create",       // บอกชีตว่านี่คือการสั่งซื้อใหม่
-          orderId: newOrderId,    // ส่งรหัสออเดอร์ไปด้วย
           customerName: fullName,
           phone: phone,
           address: addressDetail,
@@ -218,8 +204,6 @@ export default function HomePage() {
     }
   };
 
-    
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 pb-20 font-sans relative">
       
@@ -229,71 +213,22 @@ export default function HomePage() {
         </div>
       )}
 
-     {/* 1. Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
-        <Link href="/" className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f] hover:opacity-80 transition cursor-pointer">
-          <div className="bg-[#0a4a2f] p-2 rounded-full border-2 border-[#f3c623] shadow-sm">
-            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+      {/* 1. Navbar (ปรับปรุงให้รองรับมือถือแนวตั้งแบบสมบูรณ์) */}
+      <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm gap-y-3">
+        
+        {/* ส่วนที่ 1: โลโก้ (อยู่ซ้ายบนมือถือ) */}
+        <div className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f]">
+          <div className="bg-[#0a4a2f] p-1.5 md:p-2 rounded-full border-2 border-[#f3c623]">
+            <svg className="w-4 h-4 md:w-5 md:h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
           </div>
           วิสาหกิจบ้านป่าตึงงาม
-        </Link>
-
-       <div className="hidden md:flex flex-1 max-w-xl mx-8 relative z-50">
-          {/* ช่องกรอกข้อความ */}
-         <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault(); // ป้องกันหน้าเว็บกระตุก/รีเฟรช
-                e.currentTarget.blur(); // สั่งให้แป้นพิมพ์มือถือมุดลงไป
-              }
-            }}
-            placeholder="ค้นหาสินค้า อาหาร ของใช้..."
-            className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f]"
-          />
-          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-
-          {/* กล่อง Dropdown ที่จะเด้งลงมาเมื่อพิมพ์ค้นหา */}
-          {searchQuery.trim().length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto">
-              {filteredProducts.length > 0 ? (
-                <div className="p-2 space-y-1">
-                  {filteredProducts.map((item) => (
-                    <div 
-                      key={item.id} 
-                      onClick={() => {
-                        setSelectedProduct(item); // เปิด Popup รายละเอียดสินค้า
-                        setSearchQuery(""); // ล้างคำค้นหาเพื่อให้กล่องปิดไป
-                      }}
-                      className="flex items-center gap-3 p-2 hover:bg-green-50 rounded-xl cursor-pointer transition border border-transparent hover:border-green-100"
-                    >
-                      <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-bold text-[#0a4a2f] truncate">{item.name}</h4>
-                        <p className="text-xs text-gray-500 truncate">{item.vendor}</p>
-                      </div>
-                      <div className="text-orange-600 font-extrabold text-sm shrink-0">
-                        ฿{item.price}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                  <p className="text-gray-500 text-sm font-medium">ไม่พบสินค้า "{searchQuery}"</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="flex items-center gap-4 text-sm font-medium">
+        {/* ส่วนที่ 2: ปุ่มตะกร้าและบัญชี (อยู่ขวาบนมือถือ) */}
+        <div className="flex items-center gap-3 text-sm font-medium order-2 md:order-3">
           <button 
             onClick={() => { setIsCartOpen(true); setShowPayment(false); }}
-            className="relative flex items-center gap-2 text-gray-600 hover:text-[#0a4a2f] transition p-2"
+            className="relative flex items-center gap-2 text-gray-600 hover:text-[#0a4a2f] transition p-1 md:p-2"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             {totalItemsCount > 0 && (
@@ -303,52 +238,61 @@ export default function HomePage() {
             )}
           </button>
           
-          {/* ปุ่มล็อกอิน / บัญชีของฉัน */}
           {user ? (
-            <Link href="/account" className="flex items-center gap-2 bg-green-50 text-[#0a4a2f] px-4 py-2 rounded-full border border-green-200 hover:bg-green-100 transition shadow-sm font-bold">
-              <div className="w-7 h-7 bg-[#0a4a2f] text-white rounded-full flex items-center justify-center text-sm uppercase">
+            <Link href="/account" className="flex items-center gap-2 bg-green-50 text-[#0a4a2f] px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-green-200 hover:bg-green-100 transition shadow-sm font-bold">
+              <div className="w-6 h-6 md:w-7 md:h-7 bg-[#0a4a2f] text-white rounded-full flex items-center justify-center text-xs md:text-sm uppercase">
                 {user.email?.charAt(0) || "U"}
               </div>
               <span className="hidden sm:inline">บัญชีของฉัน</span>
             </Link>
           ) : (
-            <Link href="/login" className="flex items-center gap-2 bg-[#0a4a2f] text-[#f3c623] px-5 py-2.5 rounded-full hover:bg-[#073622] transition shadow-sm">
+            <Link href="/login" className="flex items-center gap-2 bg-[#0a4a2f] text-[#f3c623] px-4 md:px-5 py-2 md:py-2.5 rounded-full hover:bg-[#073622] transition shadow-sm text-xs md:text-sm">
               เข้าสู่ระบบ
             </Link>
           )}
         </div>
+
+        {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
+        <div className="flex w-full md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2">
+          <input
+            type="text"
+            placeholder="ค้นหาสินค้า อาหาร ของใช้..."
+            className="w-full py-2 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f] text-sm md:text-base"
+          />
+          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+
       </nav>
 
       {/* 2. Hero Section */}
-      <div className="relative w-full h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-[#0a4a2f]">
+      <div className="relative w-full h-[350px] md:h-[450px] flex flex-col items-center justify-center text-white overflow-hidden bg-[#0a4a2f]">
         <video ref={videoRef} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
           <source src="https://grilvqiyczvdkfumxxqy.supabase.co/storage/v1/object/public/fish/hero-video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/40"></div>
-        <div className="z-10 text-center space-y-6 max-w-3xl px-4 flex flex-col items-center">
-          <div className="bg-black/50 text-[#f3c623] px-6 py-2.5 rounded-full text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
+        <div className="z-10 text-center space-y-4 md:space-y-6 max-w-3xl px-4 flex flex-col items-center">
+          <div className="bg-black/50 text-[#f3c623] px-4 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm inline-flex items-center gap-2 backdrop-blur-md border border-[#f3c623]/50 font-bold shadow-xl">
             ⭐ OTOP 5 ดาว วิสาหกิจชุมชน
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold leading-tight text-white tracking-wide" style={{ textShadow: "0px 4px 15px rgba(0, 0, 0, 0.9), 0px 2px 5px rgba(0, 0, 0, 0.7)" }}>
+          <h1 className="text-4xl md:text-7xl font-extrabold leading-tight text-white tracking-wide" style={{ textShadow: "0px 4px 15px rgba(0, 0, 0, 0.9), 0px 2px 5px rgba(0, 0, 0, 0.7)" }}>
             วิสาหกิจบ้านป่าตึงงาม<br/>หมู่ 18
           </h1>
         </div>
       </div>
 
       {/* 3. ส่วนแสดงรายการสินค้าทั้งหมด */}
-      <div id="products" className="max-w-7xl mx-auto px-6 mt-12">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <div id="products" className="max-w-7xl mx-auto px-4 md:px-6 mt-8 md:mt-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-8 gap-2 md:gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-[#0a4a2f]">สินค้าแนะนำของชุมชน</h2>
-            <p className="text-gray-500 mt-2">แปรรูปอาหารและหัตถกรรม สด สะอาด ปลอดภัย</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#0a4a2f]">สินค้าแนะนำของชุมชน</h2>
+            <p className="text-gray-500 mt-1 md:mt-2 text-sm md:text-base">แปรรูปอาหารและหัตถกรรม สด สะอาด ปลอดภัย</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          {products.map((item) => (
+            <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
                 <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -358,24 +302,24 @@ export default function HomePage() {
 
                 <div className="sm:col-span-7 flex flex-col justify-between h-full space-y-4">
                   <div className="cursor-pointer" onClick={() => setSelectedProduct(item)}>
-                    <span className="inline-block text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200 mb-2">{item.vendor}</span>
-                    <h3 className="text-xl font-extrabold text-gray-900 mb-2 line-clamp-2 hover:text-[#0a4a2f] transition">{item.name}</h3>
-                    <p className="text-gray-500 text-sm line-clamp-3">{item.description}</p>
+                    <span className="inline-block text-[10px] md:text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200 mb-2">{item.vendor}</span>
+                    <h3 className="text-lg md:text-xl font-extrabold text-gray-900 mb-2 line-clamp-2 hover:text-[#0a4a2f] transition">{item.name}</h3>
+                    <p className="text-gray-500 text-xs md:text-sm line-clamp-3">{item.description}</p>
                   </div>
 
                   <div className="pt-4 border-t border-gray-100">
-                    <span className="text-xs text-gray-500 block mb-1">ราคาจำหน่าย</span>
-                    <p className="text-orange-600 font-extrabold text-2xl mb-3">
-                      ฿{item.price} <span className="text-sm font-normal text-gray-500">/ {item.unit}</span>
+                    <span className="text-[10px] md:text-xs text-gray-500 block mb-1">ราคาจำหน่าย</span>
+                    <p className="text-orange-600 font-extrabold text-xl md:text-2xl mb-3">
+                      ฿{item.price} <span className="text-xs md:text-sm font-normal text-gray-500">/ {item.unit}</span>
                     </p>
                     
                     <div className="flex gap-2">
-                      <button onClick={() => addToCartOnly(item.id)} className="flex-1 border-2 border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1.5">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                      <button onClick={() => addToCartOnly(item.id)} className="flex-1 border-2 border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center justify-center gap-1.5">
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                         ใส่ตะกร้า
                       </button>
-                      <button onClick={() => buyNow(item.id)} className="flex-1 bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-2.5 rounded-xl font-bold text-sm transition shadow-md flex items-center justify-center gap-1.5">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                      <button onClick={() => buyNow(item.id)} className="flex-1 bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition shadow-md flex items-center justify-center gap-1.5">
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                         สั่งซื้อเลย
                       </button>
                     </div>
@@ -383,17 +327,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-         ))
-          ) : (
-            <div className="col-span-1 lg:col-span-2 py-16 text-center bg-white rounded-3xl border border-dashed border-gray-300">
-              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              <h3 className="text-xl font-bold text-gray-700 mb-2">ไม่พบสินค้าที่คุณค้นหา</h3>
-              <p className="text-gray-500 text-sm">ลองใช้คำค้นหาอื่น หรือตรวจสอบตัวสะกดดูอีกครั้งนะครับ</p>
-              <button onClick={() => setSearchQuery("")} className="mt-6 px-6 py-2 bg-green-50 text-[#0a4a2f] font-bold rounded-full border border-green-200 hover:bg-green-100 transition">
-                ล้างคำค้นหา
-              </button>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -401,29 +335,29 @@ export default function HomePage() {
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="bg-[#0a4a2f] p-5 text-white flex justify-between items-center sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-[#f3c623]">รายละเอียดสินค้า</h2>
+            <div className="bg-[#0a4a2f] p-4 md:p-5 text-white flex justify-between items-center sticky top-0 z-10">
+              <h2 className="text-lg md:text-xl font-bold text-[#f3c623]">รายละเอียดสินค้า</h2>
               <button onClick={() => setSelectedProduct(null)} className="p-1 hover:bg-white/20 rounded-full transition text-white">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="flex flex-col sm:flex-row gap-5 items-start">
-                <img src={selectedProduct.image} className="w-32 h-32 object-cover rounded-xl border border-gray-200 shadow-sm" alt={selectedProduct.name} />
+            <div className="p-5 md:p-6 space-y-5 md:space-y-6">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-5 items-start">
+                <img src={selectedProduct.image} className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-xl border border-gray-200 shadow-sm" alt={selectedProduct.name} />
                 <div>
-                  <h3 className="font-bold text-xl text-[#0a4a2f] mb-1">{selectedProduct.name}</h3>
-                  <span className="text-xs font-bold text-[#0a4a2f] bg-green-50 px-2 py-0.5 rounded border border-green-200 inline-block mb-2">{selectedProduct.vendor}</span>
-                  <p className="text-gray-600 text-sm leading-relaxed">{selectedProduct.description}</p>
+                  <h3 className="font-bold text-lg md:text-xl text-[#0a4a2f] mb-1">{selectedProduct.name}</h3>
+                  <span className="text-[10px] md:text-xs font-bold text-[#0a4a2f] bg-green-50 px-2 py-0.5 rounded border border-green-200 inline-block mb-2">{selectedProduct.vendor}</span>
+                  <p className="text-gray-600 text-xs md:text-sm leading-relaxed">{selectedProduct.description}</p>
                 </div>
               </div>
 
               <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                 <h4 className="font-bold text-[#0a4a2f] text-sm mb-3">ข้อมูลจำเพาะ</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs md:text-sm">
                   {selectedProduct.details.map((item: any, idx: number) => (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-gray-100">
-                      <span className="text-gray-400 block text-xs">{item.title}</span>
+                      <span className="text-gray-400 block text-[10px] md:text-xs">{item.title}</span>
                       <span className="font-semibold text-gray-800">{item.value}</span>
                     </div>
                   ))}
@@ -443,13 +377,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-end gap-3">
-                <button onClick={() => { addToCartOnly(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-3 rounded-xl border-2 border-[#0a4a2f] text-[#0a4a2f] font-bold hover:bg-green-50 text-sm flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
+                <button onClick={() => { addToCartOnly(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl border-2 border-[#0a4a2f] text-[#0a4a2f] font-bold hover:bg-green-50 text-xs md:text-sm flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                   ใส่ตะกร้า
                 </button>
-                <button onClick={() => { buyNow(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-3 rounded-xl bg-[#0a4a2f] text-[#f3c623] font-bold hover:bg-[#073622] text-sm flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <button onClick={() => { buyNow(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl bg-[#0a4a2f] text-[#f3c623] font-bold hover:bg-[#073622] text-xs md:text-sm flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                   สั่งซื้อเลย
                 </button>
               </div>
@@ -462,44 +396,44 @@ export default function HomePage() {
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="bg-[#0a4a2f] p-4 px-6 text-white flex justify-between items-center sticky top-0 z-20">
-              <h2 className="text-xl font-bold text-[#f3c623] flex items-center gap-2">
+            <div className="bg-[#0a4a2f] p-4 px-5 md:px-6 text-white flex justify-between items-center sticky top-0 z-20">
+              <h2 className="text-lg md:text-xl font-bold text-[#f3c623] flex items-center gap-2">
                 {showPayment ? "📦 จัดส่งและชำระเงิน" : "🛒 ตะกร้าสินค้าของคุณ"}
               </h2>
               <button onClick={() => { setIsCartOpen(false); setShowPayment(false); }} className="p-1.5 hover:bg-white/20 rounded-full transition text-white">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-5 md:p-6">
               {!showPayment ? (
                 totalItemsCount === 0 ? (
                   <div className="text-center py-12">
-                    <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    <p className="text-gray-500 text-lg">ยังไม่มีสินค้าในตะกร้า</p>
+                    <svg className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    <p className="text-gray-500 text-sm md:text-lg">ยังไม่มีสินค้าในตะกร้า</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="max-h-[40vh] overflow-y-auto space-y-3 pr-2">
                       {cartItems.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                          <div className="flex gap-3 items-center w-full">
-                            <img src={item.image} alt={item.name} className="w-14 h-14 object-cover rounded-xl border border-gray-200 shrink-0" />
+                        <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 md:p-3 rounded-2xl border border-gray-100">
+                          <div className="flex gap-2 md:gap-3 items-center w-full">
+                            <img src={item.image} alt={item.name} className="w-12 h-12 md:w-14 md:h-14 object-cover rounded-xl border border-gray-200 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-[#0a4a2f] text-sm truncate">{item.name}</h3>
-                              <p className="text-xs text-orange-600 font-semibold mt-0.5">฿{item.price} / {item.unit}</p>
+                              <h3 className="font-bold text-[#0a4a2f] text-xs md:text-sm truncate">{item.name}</h3>
+                              <p className="text-[10px] md:text-xs text-orange-600 font-semibold mt-0.5">฿{item.price} / {item.unit}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm shrink-0 ml-2">
-                            <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">-</button>
-                            <span className="font-bold w-4 text-center text-sm">{item.qty}</span>
-                            <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">+</button>
+                          <div className="flex items-center gap-1 md:gap-2 bg-white border border-gray-200 rounded-full px-1.5 py-1 shadow-sm shrink-0 ml-1 md:ml-2">
+                            <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">-</button>
+                            <span className="font-bold w-4 text-center text-xs md:text-sm">{item.qty}</span>
+                            <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full font-bold">+</button>
                           </div>
                         </div>
                       ))}
                     </div>
                     
-                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-sm mt-4">
+                    <div className="bg-gray-50 p-3 md:p-4 rounded-2xl border border-gray-100 space-y-2 text-xs md:text-sm mt-4">
                       <div className="flex justify-between text-gray-600">
                         <span>ราคาสินค้ารวม ({totalItemsCount} ชิ้น)</span>
                         <span>฿{subtotal}</span>
@@ -508,47 +442,47 @@ export default function HomePage() {
                         <span>ค่าจัดส่ง (เหมาจ่าย)</span>
                         <span>฿{shippingFee}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-base font-extrabold text-[#0a4a2f]">
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-sm md:text-base font-extrabold text-[#0a4a2f]">
                         <span>ยอดรวมสุทธิ</span>
-                        <span className="text-2xl text-orange-600">฿{grandTotal}</span>
+                        <span className="text-xl md:text-2xl text-orange-600">฿{grandTotal}</span>
                       </div>
                     </div>
 
-                    <button onClick={() => setShowPayment(true)} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-2xl font-bold text-lg transition shadow-md flex justify-center items-center gap-2">
-                      ดำเนินการจัดส่งและชำระเงิน <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    <button onClick={() => setShowPayment(true)} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 md:py-3.5 rounded-2xl font-bold text-sm md:text-lg transition shadow-md flex justify-center items-center gap-2">
+                      ดำเนินการจัดส่งและชำระเงิน <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                   </div>
                 )
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   
-                  <div className="bg-green-50/70 p-4 rounded-2xl border border-green-200 space-y-3">
+                  <div className="bg-green-50/70 p-3 md:p-4 rounded-2xl border border-green-200 space-y-3">
                     <div className="flex items-center justify-between border-b border-green-200 pb-2">
-                      <span className="font-bold text-[#0a4a2f] text-sm flex items-center gap-1.5">
+                      <span className="font-bold text-[#0a4a2f] text-xs md:text-sm flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 11h14l1 12H4L5 11z"></path></svg>
                         รายการสินค้าที่สั่งซื้อ
                       </span>
-                      <span className="text-xs font-bold text-green-700 bg-white px-2.5 py-0.5 rounded-full border border-green-200">
+                      <span className="text-[10px] md:text-xs font-bold text-green-700 bg-white px-2 py-0.5 rounded-full border border-green-200">
                         {totalItemsCount} ชิ้น
                       </span>
                     </div>
 
                     <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                       {cartItems.map((item) => (
-                        <div key={item.id} className="flex gap-3 items-center bg-white p-2 rounded-xl border border-green-100 shadow-sm">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0" />
+                        <div key={item.id} className="flex gap-2 md:gap-3 items-center bg-white p-2 rounded-xl border border-green-100 shadow-sm">
+                          <img src={item.image} alt={item.name} className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-lg border border-gray-200 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-[#0a4a2f] text-xs truncate">{item.name}</h4>
+                            <h4 className="font-bold text-[#0a4a2f] text-[10px] md:text-xs truncate">{item.name}</h4>
                             <div className="flex justify-between items-center mt-0.5">
-                              <span className="text-[10px] text-gray-500 font-medium">฿{item.price} x {item.qty}</span>
-                              <span className="font-extrabold text-orange-600 text-xs">฿{item.price * item.qty}</span>
+                              <span className="text-[9px] md:text-[10px] text-gray-500 font-medium">฿{item.price} x {item.qty}</span>
+                              <span className="font-extrabold text-orange-600 text-[10px] md:text-xs">฿{item.price * item.qty}</span>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="space-y-1 text-xs text-gray-600 pt-2 border-t border-green-200/50">
+                    <div className="space-y-1 text-[10px] md:text-xs text-gray-600 pt-2 border-t border-green-200/50">
                       <div className="flex justify-between">
                         <span>ราคาสินค้ารวม:</span>
                         <span className="font-semibold text-gray-800">฿{subtotal}</span>
@@ -557,34 +491,34 @@ export default function HomePage() {
                         <span>ค่าบริการจัดส่ง:</span>
                         <span className="font-semibold text-gray-800">฿{shippingFee}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-green-200 text-sm font-extrabold text-[#0a4a2f]">
+                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-green-200 text-xs md:text-sm font-extrabold text-[#0a4a2f]">
                         <span>ยอดชำระสุทธิ:</span>
-                        <span className="text-xl text-orange-600">฿{grandTotal}</span>
+                        <span className="text-lg md:text-xl text-orange-600">฿{grandTotal}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <h3 className="text-xs md:text-sm font-bold text-gray-800 flex items-center gap-2">
                       <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                       ระบุข้อมูลผู้รับสินค้า
-                      {!user && <span className="text-[10px] font-normal text-red-500 ml-auto">ไม่ได้เข้าสู่ระบบ</span>}
+                      {!user && <span className="text-[9px] md:text-[10px] font-normal text-red-500 ml-auto">ไม่ได้เข้าสู่ระบบ</span>}
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                       <input 
                         type="text" 
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="ชื่อ-นามสกุล ผู้รับ *"
-                        className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                        className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
                       />
                       <input 
                         type="tel" 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="เบอร์โทรศัพท์ *"
-                        className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                        className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
                       />
                     </div>
 
@@ -592,59 +526,59 @@ export default function HomePage() {
                       value={addressDetail}
                       onChange={(e) => setAddressDetail(e.target.value)}
                       rows={2}
-                      className="w-full p-3 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
+                      className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
                       placeholder="ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *"
                     />
                     {user && (
-                      <p className="text-xs text-gray-500 text-right">💡 ดึงข้อมูลที่อยู่มาจากบัญชีของคุณอัตโนมัติ</p>
+                      <p className="text-[10px] md:text-xs text-gray-500 text-right">💡 ดึงข้อมูลที่อยู่มาจากบัญชีของคุณอัตโนมัติ</p>
                     )}
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <h3 className="text-xs md:text-sm font-bold text-gray-800 flex items-center gap-2">
                       <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                       วิธีชำระเงิน
                     </h3>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <button onClick={() => setPaymentMethod("qr")} className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-600 text-[#0a4a2f] ring-2 ring-green-600/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                        <span className="text-xs font-bold">โอนเงิน / QR Code</span>
+                    <div className="grid grid-cols-2 gap-2 md:gap-3">
+                      <button onClick={() => setPaymentMethod("qr")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-600 text-[#0a4a2f] ring-2 ring-green-600/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span className="text-[10px] md:text-xs font-bold">โอนเงิน / QR Code</span>
                       </button>
 
-                      <button onClick={() => setPaymentMethod("cod")} className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-800 ring-2 ring-orange-500/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span className="text-xs font-bold">เก็บเงินปลายทาง</span>
+                      <button onClick={() => setPaymentMethod("cod")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-800 ring-2 ring-orange-500/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span className="text-[10px] md:text-xs font-bold">เก็บเงินปลายทาง</span>
                       </button>
                     </div>
                   </div>
 
                   {paymentMethod === "qr" ? (
-                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 flex flex-col items-center space-y-3">
-                      <div className="bg-white p-3 rounded-2xl border-2 border-[#0a4a2f] shadow-sm text-center">
-                        <img src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" alt="Thai QR Payment" className="w-48 h-auto object-contain mx-auto rounded-lg mb-2" />
-                        <p className="text-xs text-gray-500">สแกน QR PromptPay เพื่อโอนเงิน</p>
+                    <div className="bg-gray-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-gray-200 flex flex-col items-center space-y-3">
+                      <div className="bg-white p-2 md:p-3 rounded-xl md:rounded-2xl border-2 border-[#0a4a2f] shadow-sm text-center">
+                        <img src="/7cf48c5c-2375-46e8-8a30-04b7ccef97f5.jpg" alt="Thai QR Payment" className="w-32 md:w-48 h-auto object-contain mx-auto rounded-lg mb-1 md:mb-2" />
+                        <p className="text-[10px] md:text-xs text-gray-500">สแกน QR PromptPay เพื่อโอนเงิน</p>
                       </div>
-                      <div className="w-full bg-white p-3 rounded-xl border border-gray-200 text-center text-xs space-y-1">
+                      <div className="w-full bg-white p-2 md:p-3 rounded-xl border border-gray-200 text-center text-xs md:text-sm space-y-1">
                         <p className="text-gray-500">ชื่อบัญชี: <span className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</span></p>
-                        <p className="text-gray-500">ยอดที่ต้องโอน: <span className="font-extrabold text-orange-600 text-base">฿{grandTotal}</span></p>
+                        <p className="text-gray-500">ยอดที่ต้องโอน: <span className="font-extrabold text-orange-600 text-sm md:text-base">฿{grandTotal}</span></p>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-orange-50 p-5 rounded-2xl border border-orange-200 text-center space-y-2">
-                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-1">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                    <div className="bg-orange-50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-orange-200 text-center space-y-2">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-1">
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                       </div>
-                      <p className="font-bold text-orange-900 text-sm">บริการเก็บเงินปลายทาง</p>
-                      <p className="text-xs text-orange-700">เตรียมเงินสด <span className="font-bold text-orange-900 text-sm">฿{grandTotal}</span> ไว้ชำระกับพนักงานจัดส่งเมื่อสินค้าถึงมือคุณ</p>
+                      <p className="font-bold text-orange-900 text-xs md:text-sm">บริการเก็บเงินปลายทาง</p>
+                      <p className="text-[10px] md:text-xs text-orange-700">เตรียมเงินสด <span className="font-bold text-orange-900 text-xs md:text-sm">฿{grandTotal}</span> ไว้ชำระกับพนักงานจัดส่งเมื่อสินค้าถึงมือคุณ</p>
                     </div>
                   )}
 
                   <div className="space-y-2 pt-2">
-                    <button onClick={handleConfirmOrder} className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3.5 rounded-2xl font-bold text-lg transition shadow-md flex justify-center items-center gap-2">
+                    <button onClick={handleConfirmOrder} className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-sm md:text-lg transition shadow-md flex justify-center items-center gap-2">
                       {paymentMethod === "qr" ? "ยืนยันการโอนเงิน / แจ้งชำระเงิน" : "ยืนยันการสั่งซื้อปลายทาง"}
                     </button>
-                    <button onClick={() => setShowPayment(false)} className="w-full text-center text-xs text-gray-500 hover:text-gray-800 py-2 block">
+                    <button onClick={() => setShowPayment(false)} className="w-full text-center text-[10px] md:text-xs text-gray-500 hover:text-gray-800 py-2 block">
                       ← ย้อนกลับไปแก้ไขตะกร้าสินค้า
                     </button>
                   </div>
@@ -655,33 +589,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-      {/* --- ส่วน Footer (เครดิตล่างสุด) --- */}
-      <footer className="bg-[#0a4a2f] border-t-4 border-[#f3c623] text-white py-10 mt-16 w-full relative z-40">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-3">
-          
-          <div className="space-y-1">
-           <p className="font-bold flex items-center justify-center gap-1 text-lg text-[#f3c623]">  
-              วิสาหกิจบ้านป่าตึงงาม หมู่ 18
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
-            </p>
-            <p className="text-sm text-gray-300">ตำบลป่า อำเภอแ่ปลื้ม</p>
-            <p className="text-sm text-gray-300">จังหวัดเชียงราย 57100</p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 font-extrabold text-xl pt-3 pb-1">
-            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-            Tel : 063-405-2812
-          </div>
-
-          <div className="pt-2 flex justify-center">
-            {/* สามารถใส่ลิงก์ Facebook ร้าน ตรง href="#" แทนเครื่องหมาย # ได้เลยครับ */}
-            <a href="https://www.facebook.com/pongpichit.tarboonsom" target="_blank" rel="noreferrer" className="bg-[#f3c623] text-[#0a4a2f] w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition shadow-md">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd"></path></svg>
-            </a>
-          </div>
-
-        </div>
-      </footer>
     </div>
   );
 }
