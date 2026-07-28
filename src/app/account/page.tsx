@@ -237,26 +237,26 @@ export default function AccountPage() {
         </div>
       </div>
       {/* --- ส่วน Footer (เครดิตล่างสุด) --- */}
-      <footer className="bg-[#f4811f] text-white py-10 mt-16 w-full relative z-40">
+     <footer className="bg-[#0a4a2f] border-t-4 border-[#f3c623] text-white py-10 mt-16 w-full relative z-40">
         <div className="max-w-4xl mx-auto px-4 text-center space-y-3">
           
           <div className="space-y-1">
-            <p className="font-bold flex items-center justify-center gap-1 text-lg">
+           <p className="font-bold flex items-center justify-center gap-1 text-lg text-[#f3c623]">  
               วิสาหกิจบ้านป่าตึงงาม หมู่ 18
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
             </p>
-            <p className="text-sm">ตำบลป่า อำเภอแ่ปลื้ม</p>
-            <p className="text-sm">จังหวัดเชียงราย 57100</p>
+            <p className="text-sm text-gray-300">ตำบลป่า อำเภอแ่ปลื้ม</p>
+            <p className="text-sm text-gray-300">จังหวัดเชียงราย 57100</p>
           </div>
 
           <div className="flex items-center justify-center gap-2 font-extrabold text-xl pt-3 pb-1">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
             Tel : 063-405-2812
           </div>
 
           <div className="pt-2 flex justify-center">
             {/* สามารถใส่ลิงก์ Facebook ร้าน ตรง href="#" แทนเครื่องหมาย # ได้เลยครับ */}
-            <a href="https://www.facebook.com/pongpichit.tarboonsom" target="_blank" rel="noreferrer" className="bg-white text-[#f4811f] w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition shadow-md">
+            <a href="https://www.facebook.com/pongpichit.tarboonsom" target="_blank" rel="noreferrer" className="bg-[#f3c623] text-[#0a4a2f] w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition shadow-md">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd"></path></svg>
             </a>
           </div>
