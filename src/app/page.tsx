@@ -304,7 +304,8 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {products.map((item) => (
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((item) => (
             <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition duration-300">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
                 <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
@@ -341,7 +342,17 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          ))}
+         ))
+          ) : (
+            <div className="col-span-1 lg:col-span-2 py-16 text-center bg-white rounded-3xl border border-dashed border-gray-300">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <h3 className="text-xl font-bold text-gray-700 mb-2">ไม่พบสินค้าที่คุณค้นหา</h3>
+              <p className="text-gray-500 text-sm">ลองใช้คำค้นหาอื่น หรือตรวจสอบตัวสะกดดูอีกครั้งนะครับ</p>
+              <button onClick={() => setSearchQuery("")} className="mt-6 px-6 py-2 bg-green-50 text-[#0a4a2f] font-bold rounded-full border border-green-200 hover:bg-green-100 transition">
+                ล้างคำค้นหา
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
