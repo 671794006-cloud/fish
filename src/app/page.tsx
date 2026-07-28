@@ -19,6 +19,7 @@ export default function HomePage() {
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [toastMessage, setToastMessage] = useState(""); 
+  const [searchQuery, setSearchQuery] = useState("");
   
   // ฟอร์มข้อมูลจัดส่ง
   const [fullName, setFullName] = useState("");
