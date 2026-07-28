@@ -61,12 +61,15 @@ export default function AccountPage() {
     setSaving(false);
   };
 
-  // --- ฟังก์ชันยกเลิกคำสั่งซื้อ ---
+// --- ฟังก์ชันยกเลิกคำสั่งซื้อ ---
   const handleCancelOrder = async (orderId: number) => {
     const confirmCancel = window.confirm("คุณแน่ใจหรือไม่ที่จะยกเลิกคำสั่งซื้อนี้?");
     if (!confirmCancel) return;
 
-    // อัปเดตสถานะใน Supabase
+    // 🔴 ใส่ URL ของ Google Apps Script ตรงนี้ด้วยครับ (URL เดียวกับหน้าสั่งซื้อเลย)
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
+
+    // 1. อัปเดตสถานะใน Supabase
     const { error } = await supabase
       .from('orders')
       .update({ status: 'ยกเลิกแล้ว' })
@@ -75,8 +78,24 @@ export default function AccountPage() {
     if (error) {
       alert("เกิดข้อผิดพลาดในการยกเลิก: " + error.message);
     } else {
+      
+      // 2. แอบส่งคำสั่งไปเปลี่ยนสถานะใน Google Sheets ให้เป็น "ยกเลิกแล้ว"
+      try {
+        await fetch(scriptUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "cancel",     // บอกชีตว่านี่คือการยกเลิก
+            orderId: orderId      // ส่งรหัสออเดอร์ไปให้ชีตค้นหาบรรทัดที่ถูกต้อง
+          }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+
       alert("✅ ยกเลิกคำสั่งซื้อสำเร็จ");
-      // อัปเดตข้อมูลบนหน้าจอทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
+      // อัปเดตหน้าจอทันที
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: 'ยกเลิกแล้ว' } : order
       ));
