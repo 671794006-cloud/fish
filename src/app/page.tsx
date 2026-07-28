@@ -144,7 +144,7 @@ export default function HomePage() {
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
- // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
+// --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
@@ -157,7 +157,7 @@ export default function HomePage() {
     }
 
     // 🔴 ใส่ URL ของ Google Apps Script ตรงนี้นะครับ
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzaZiJ4cMds2Q73Oc0TDj7JbSlUptaGQRWP3Jho3kCQ8-SSD93VINxS5X26M0hgcVi8/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
 
@@ -166,22 +166,26 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 1. บันทึกลง Supabase (เพื่อให้โชว์ในหน้าประวัติ)
-      const { error: dbError } = await supabase.from('orders').insert({
+      // 1. บันทึกลง Supabase และขอข้อมูลกลับมาเพื่อเอา ID ของออเดอร์
+      const { data: orderData, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
-        items: cartItems, // บันทึกสินค้าทั้งหมดในตะกร้า
+        items: cartItems, 
         total_price: grandTotal,
         status: 'รอดำเนินการ'
-      });
+      }).select(); // <-- เพิ่ม select() ตรงนี้
 
       if (dbError) throw dbError;
+      
+      const newOrderId = orderData[0].id; // ได้รหัสออเดอร์มาแล้ว!
 
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (เพื่อเอาไปแพ็คของ)
+      // 2. สั่งยิงข้อมูลไปที่ Google Sheets 
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "create",       // บอกชีตว่านี่คือการสั่งซื้อใหม่
+          orderId: newOrderId,    // ส่งรหัสออเดอร์ไปด้วย
           customerName: fullName,
           phone: phone,
           address: addressDetail,
@@ -206,6 +210,8 @@ export default function HomePage() {
       console.error(error);
     }
   };
+
+    
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 pb-20 font-sans relative">
