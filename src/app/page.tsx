@@ -144,6 +144,7 @@ export default function HomePage() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
+  const [searchQuery, setSearchQuery] = useState("");
 
 // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
