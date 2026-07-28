@@ -238,8 +238,9 @@ export default function HomePage() {
           วิสาหกิจบ้านป่าตึงงาม
         </Link>
 
-        <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
-         <input
+       <div className="hidden md:flex flex-1 max-w-xl mx-8 relative z-50">
+          {/* ช่องกรอกข้อความ */}
+          <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -247,6 +248,40 @@ export default function HomePage() {
             className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f]"
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+
+          {/* กล่อง Dropdown ที่จะเด้งลงมาเมื่อพิมพ์ค้นหา */}
+          {searchQuery.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto">
+              {filteredProducts.length > 0 ? (
+                <div className="p-2 space-y-1">
+                  {filteredProducts.map((item) => (
+                    <div 
+                      key={item.id} 
+                      onClick={() => {
+                        setSelectedProduct(item); // เปิด Popup รายละเอียดสินค้า
+                        setSearchQuery(""); // ล้างคำค้นหาเพื่อให้กล่องปิดไป
+                      }}
+                      className="flex items-center gap-3 p-2 hover:bg-green-50 rounded-xl cursor-pointer transition border border-transparent hover:border-green-100"
+                    >
+                      <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-[#0a4a2f] truncate">{item.name}</h4>
+                        <p className="text-xs text-gray-500 truncate">{item.vendor}</p>
+                      </div>
+                      <div className="text-orange-600 font-extrabold text-sm shrink-0">
+                        ฿{item.price}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                  <p className="text-gray-500 text-sm font-medium">ไม่พบสินค้า "{searchQuery}"</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-sm font-medium">
