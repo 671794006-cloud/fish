@@ -13,6 +13,9 @@ export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [user, setUser] = useState<any>(null);
 
+  // --- สถานะระบบค้นหาสินค้า (เพิ่มมาใหม่) ---
+  const [searchQuery, setSearchQuery] = useState("");
+
   // --- สถานะระบบตะกร้า ---
   const [cart, setCart] = useState<Record<number, number>>({}); 
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -103,6 +106,12 @@ export default function HomePage() {
     }
   ];
 
+  // --- ระบบกรองสินค้าจากช่องค้นหา (เพิ่มมาใหม่) ---
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    product.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => { setToastMessage(""); }, 2000);
@@ -153,7 +162,7 @@ export default function HomePage() {
       return;
     }
 
-    // ✅ ลิงก์ Google Sheets ของคุณ (ใส่ไว้ให้แล้ว!)
+    // ลิงก์ Google Sheets ของคุณ
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
@@ -163,7 +172,7 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 1. บันทึกลง Supabase (เพื่อให้โชว์ในหน้าประวัติ)
+      // 1. บันทึกลง Supabase
       const { error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
@@ -173,7 +182,7 @@ export default function HomePage() {
 
       if (dbError) throw dbError;
 
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (เพื่อเอาไปแพ็คของ)
+      // 2. สั่งยิงข้อมูลไปที่ Google Sheets
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -213,10 +222,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 1. Navbar (ปรับปรุงให้รองรับมือถือแนวตั้งแบบสมบูรณ์) */}
+      {/* 1. Navbar */}
       <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm gap-y-3">
         
-        {/* ส่วนที่ 1: โลโก้ (อยู่ซ้ายบนมือถือ) */}
         <div className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f]">
           <div className="bg-[#0a4a2f] p-1.5 md:p-2 rounded-full border-2 border-[#f3c623]">
             <svg className="w-4 h-4 md:w-5 md:h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -224,7 +232,6 @@ export default function HomePage() {
           วิสาหกิจบ้านป่าตึงงาม
         </div>
 
-        {/* ส่วนที่ 2: ปุ่มตะกร้าและบัญชี (อยู่ขวาบนมือถือ) */}
         <div className="flex items-center gap-3 text-sm font-medium order-2 md:order-3">
           <button 
             onClick={() => { setIsCartOpen(true); setShowPayment(false); }}
@@ -252,10 +259,12 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
+        {/* ช่องค้นหาสินค้า (เพิ่ม value และ onChange เพื่อให้พิมพ์แล้วทำงานทันที) */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ค้นหาสินค้า อาหาร ของใช้..."
             className="w-full py-2.5 md:py-2 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f] text-sm md:text-base shadow-sm md:shadow-none"
           />
@@ -284,50 +293,65 @@ export default function HomePage() {
       <div id="products" className="max-w-7xl mx-auto px-4 md:px-6 mt-8 md:mt-12">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-8 gap-2 md:gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-[#0a4a2f]">สินค้าแนะนำของชุมชน</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#0a4a2f]">
+              {searchQuery ? `ผลการค้นหา: "${searchQuery}"` : "สินค้าแนะนำของชุมชน"}
+            </h2>
             <p className="text-gray-500 mt-1 md:mt-2 text-sm md:text-base">แปรรูปอาหารและหัตถกรรม สด สะอาด ปลอดภัย</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          {products.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
-                <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <span className="bg-white/90 text-[#0a4a2f] px-4 py-2 rounded-full font-bold text-xs shadow-lg">🔍 ดูรายละเอียด</span>
-                  </div>
-                </div>
-
-                <div className="sm:col-span-7 flex flex-col justify-between h-full space-y-4">
-                  <div className="cursor-pointer" onClick={() => setSelectedProduct(item)}>
-                    <span className="inline-block text-[10px] md:text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200 mb-2">{item.vendor}</span>
-                    <h3 className="text-lg md:text-xl font-extrabold text-gray-900 mb-2 line-clamp-2 hover:text-[#0a4a2f] transition">{item.name}</h3>
-                    <p className="text-gray-500 text-xs md:text-sm line-clamp-3">{item.description}</p>
+          {/* แสดงสินค้าที่ผ่านการกรองแล้ว */}
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((item) => (
+              <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
+                  <div className="sm:col-span-5 relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                      <span className="bg-white/90 text-[#0a4a2f] px-4 py-2 rounded-full font-bold text-xs shadow-lg">🔍 ดูรายละเอียด</span>
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100">
-                    <span className="text-[10px] md:text-xs text-gray-500 block mb-1">ราคาจำหน่าย</span>
-                    <p className="text-orange-600 font-extrabold text-xl md:text-2xl mb-3">
-                      ฿{item.price} <span className="text-xs md:text-sm font-normal text-gray-500">/ {item.unit}</span>
-                    </p>
-                    
-                    <div className="flex gap-2">
-                      <button onClick={() => addToCartOnly(item.id)} className="flex-1 border-2 border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center justify-center gap-1.5">
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        ใส่ตะกร้า
-                      </button>
-                      <button onClick={() => buyNow(item.id)} className="flex-1 bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition shadow-md flex items-center justify-center gap-1.5">
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        สั่งซื้อเลย
-                      </button>
+                  <div className="sm:col-span-7 flex flex-col justify-between h-full space-y-4">
+                    <div className="cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                      <span className="inline-block text-[10px] md:text-xs font-bold text-[#0a4a2f] bg-green-50 px-3 py-1 rounded-full border border-green-200 mb-2">{item.vendor}</span>
+                      <h3 className="text-lg md:text-xl font-extrabold text-gray-900 mb-2 line-clamp-2 hover:text-[#0a4a2f] transition">{item.name}</h3>
+                      <p className="text-gray-500 text-xs md:text-sm line-clamp-3">{item.description}</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <span className="text-[10px] md:text-xs text-gray-500 block mb-1">ราคาจำหน่าย</span>
+                      <p className="text-orange-600 font-extrabold text-xl md:text-2xl mb-3">
+                        ฿{item.price} <span className="text-xs md:text-sm font-normal text-gray-500">/ {item.unit}</span>
+                      </p>
+                      
+                      <div className="flex gap-2">
+                        <button onClick={() => addToCartOnly(item.id)} className="flex-1 border-2 border-[#0a4a2f] text-[#0a4a2f] hover:bg-green-50 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center justify-center gap-1.5">
+                          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                          ใส่ตะกร้า
+                        </button>
+                        <button onClick={() => buyNow(item.id)} className="flex-1 bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition shadow-md flex items-center justify-center gap-1.5">
+                          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                          สั่งซื้อเลย
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            // ถ้าพิมพ์หาแล้วไม่เจอสินค้าเลย ให้ขึ้นข้อความนี้
+            <div className="col-span-1 lg:col-span-2 text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300">
+              <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">ไม่พบสินค้าที่คุณค้นหา</h3>
+              <p className="text-gray-500">ลองค้นหาด้วยคำอื่น หรือเลือกดูสินค้าแนะนำของเรา</p>
+              <button onClick={() => setSearchQuery("")} className="mt-4 px-6 py-2 bg-green-50 text-[#0a4a2f] font-bold rounded-full hover:bg-green-100 transition border border-green-200">
+                ดูสินค้าทั้งหมด
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
