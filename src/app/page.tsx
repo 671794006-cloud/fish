@@ -144,14 +144,19 @@ export default function HomePage() {
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
-  // --- ระบบส่งข้อมูลเข้า Google Sheets ---
+ // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
       return;
     }
 
-    // 🔴 เอา URL ของ Google Apps Script มาใส่ตรงนี้นะครับ
+    if (!user) {
+      alert("กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อครับ");
+      return;
+    }
+
+    // 🔴 ใส่ URL ของ Google Apps Script ตรงนี้นะครับ
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzaZiJ4cMds2Q73Oc0TDj7JbSlUptaGQRWP3Jho3kCQ8-SSD93VINxS5X26M0hgcVi8/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
@@ -161,12 +166,21 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
+      // 1. บันทึกลง Supabase (เพื่อให้โชว์ในหน้าประวัติ)
+      const { error: dbError } = await supabase.from('orders').insert({
+        user_id: user.id,
+        items: cartItems, // บันทึกสินค้าทั้งหมดในตะกร้า
+        total_price: grandTotal,
+        status: 'รอดำเนินการ'
+      });
+
+      if (dbError) throw dbError;
+
+      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (เพื่อเอาไปแพ็คของ)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: fullName,
           phone: phone,
@@ -189,6 +203,7 @@ export default function HomePage() {
 
     } catch (error) {
       alert("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้งครับ");
+      console.error(error);
     }
   };
 
