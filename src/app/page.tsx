@@ -239,8 +239,10 @@ export default function HomePage() {
         </Link>
 
         <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
-          <input
+         <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ค้นหาสินค้า อาหาร ของใช้..."
             className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f]"
           />
