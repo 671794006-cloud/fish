@@ -11,10 +11,12 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<any>(null);
 
-  // --- สถานะระบบค้นหาสินค้า (เพิ่มมาใหม่) ---
+  // --- สถานะระบบค้นหาสินค้า ---
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // --- สถานะระบบตะกร้า ---
   const [cart, setCart] = useState<Record<number, number>>({}); 
@@ -106,7 +108,7 @@ export default function HomePage() {
     }
   ];
 
-  // --- ระบบกรองสินค้าจากช่องค้นหา (เพิ่มมาใหม่) ---
+  // กรองสินค้าตามช่องค้นหา
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -172,7 +174,6 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 1. บันทึกลง Supabase
       const { error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
@@ -182,7 +183,6 @@ export default function HomePage() {
 
       if (dbError) throw dbError;
 
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -223,7 +223,7 @@ export default function HomePage() {
       )}
 
       {/* 1. Navbar */}
-      <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm gap-y-3">
+      <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-50 shadow-sm gap-y-3">
         
         <div className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f]">
           <div className="bg-[#0a4a2f] p-1.5 md:p-2 rounded-full border-2 border-[#f3c623]">
@@ -259,16 +259,55 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* ช่องค้นหาสินค้า (เพิ่ม value และ onChange เพื่อให้พิมพ์แล้วทำงานทันที) */}
+        {/* 🔍 ช่องค้นหาสินค้า (อัปเดตระบบ Dropdown & Enter) */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาสินค้า อาหาร ของใช้..."
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} // หน่วงเวลาเล็กน้อยเพื่อให้กดคลิกสินค้าใน Dropdown ทัน
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                searchInputRef.current?.blur(); // หุบแป้นพิมพ์มือถือ
+                setIsSearchFocused(false); // ปิด Dropdown
+                // เลื่อนหน้าจอลงไปที่ส่วนแสดงสินค้า
+                document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            placeholder="ค้นหาสินค้า (กด Enter เพื่อค้นหา)..."
             className="w-full py-2.5 md:py-2 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f] text-sm md:text-base shadow-sm md:shadow-none"
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+
+          {/* 🔽 Dropdown แสดงผลลัพธ์การค้นหาใต้ช่องค้นหาทันที */}
+          {searchQuery && isSearchFocused && (
+            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] max-h-[50vh] overflow-y-auto">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map(item => (
+                  <div 
+                    key={item.id} 
+                    onClick={() => {
+                      setSelectedProduct(item);
+                      setSearchQuery(""); // เคลียร์ช่องค้นหาเมื่อกดเลือก
+                    }}
+                    className="flex items-center gap-3 p-3 hover:bg-green-50 cursor-pointer border-b border-gray-50 last:border-0 transition"
+                  >
+                    <img src={item.image} alt={item.name} className="w-12 h-12 md:w-14 md:h-14 object-cover rounded-xl border border-gray-100 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-xs md:text-sm text-[#0a4a2f] truncate">{item.name}</h4>
+                      <p className="text-[10px] md:text-xs text-orange-600 font-semibold mt-0.5">฿{item.price}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-5 text-center text-sm text-gray-500">
+                  ไม่มีสินค้าที่ตรงกับ "{searchQuery}"
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
       </nav>
@@ -301,7 +340,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          {/* แสดงสินค้าที่ผ่านการกรองแล้ว */}
           {filteredProducts.length > 0 ? (
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
@@ -342,8 +380,7 @@ export default function HomePage() {
               </div>
             ))
           ) : (
-            // ถ้าพิมพ์หาแล้วไม่เจอสินค้าเลย ให้ขึ้นข้อความนี้
-            <div className="col-span-1 lg:col-span-2 text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300">
+            <div className="col-span-1 lg:col-span-2 text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300 shadow-sm">
               <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               <h3 className="text-xl font-bold text-gray-800 mb-1">ไม่พบสินค้าที่คุณค้นหา</h3>
               <p className="text-gray-500">ลองค้นหาด้วยคำอื่น หรือเลือกดูสินค้าแนะนำของเรา</p>
