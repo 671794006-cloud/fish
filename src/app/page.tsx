@@ -252,14 +252,14 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
-        <div className="flex w-full md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2">
+      {/* ส่วนที่ 3: ช่องค้นหา (ขยายเต็มบรรทัดที่ 2 บนมือถือ หรืออยู่ตรงกลางบนคอม) */}
+        <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-2 md:mt-0">
           <input
             type="text"
             placeholder="ค้นหาสินค้า อาหาร ของใช้..."
-            className="w-full py-2 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f] text-sm md:text-base"
+            className="w-full py-2.5 md:py-2 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f] text-sm md:text-base shadow-sm md:shadow-none"
           />
-          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         </div>
 
       </nav>
