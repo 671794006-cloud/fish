@@ -222,14 +222,14 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 1. Navbar */}
+     {/* 1. Navbar */}
       <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f]">
-          <div className="bg-[#0a4a2f] p-2 rounded-full border-2 border-[#f3c623]">
+        <Link href="/" className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f] hover:opacity-80 transition cursor-pointer">
+          <div className="bg-[#0a4a2f] p-2 rounded-full border-2 border-[#f3c623] shadow-sm">
             <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
           </div>
           วิสาหกิจบ้านป่าตึงงาม
-        </div>
+        </Link>
 
         <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
           <input
