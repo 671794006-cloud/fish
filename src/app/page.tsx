@@ -240,10 +240,16 @@ export default function HomePage() {
 
        <div className="hidden md:flex flex-1 max-w-xl mx-8 relative z-50">
           {/* ช่องกรอกข้อความ */}
-          <input
+         <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); // ป้องกันหน้าเว็บกระตุก/รีเฟรช
+                e.currentTarget.blur(); // สั่งให้แป้นพิมพ์มือถือมุดลงไป
+              }
+            }}
             placeholder="ค้นหาสินค้า อาหาร ของใช้..."
             className="w-full py-2.5 pl-10 pr-4 bg-gray-50 border border-green-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0a4a2f]"
           />
