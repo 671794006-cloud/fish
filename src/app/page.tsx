@@ -31,9 +31,11 @@ export default function HomePage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
   
-  // 🌟 พิกัดแผนที่สำหรับโชว์ Google Maps ของจริง
+  // 🌟 (อัปเกรด) สถานะระบบแผนที่แบบเลื่อนปักหมุด
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showMap, setShowMap] = useState(false); // ควบคุมการเปิด/ปิดหน้าต่างแผนที่
+  const mapInstanceRef = useRef<any>(null); // เก็บตัวแปรของแผนที่
 
   // โหลดข้อมูลผู้ใช้
   useEffect(() => {
@@ -67,6 +69,72 @@ export default function HomePage() {
 
     return () => { authListener.subscription.unsubscribe(); };
   }, []);
+
+  // --- โหลดสคริปต์แผนที่ OpenStreetMap (Leaflet) ---
+  useEffect(() => {
+    if (showMap) {
+      const initMap = () => {
+        const L = (window as any).L;
+        if (!L) return;
+
+        // ถ้ามีแผนที่เก่าค้างอยู่ ให้ลบทิ้งก่อน
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+
+        // ตั้งค่าพิกัดเริ่มต้น (ถ้ายังไม่มีพิกัด ให้ไปเริ่มที่เชียงราย)
+        const lat = userLocation?.lat || 19.910480;
+        const lng = userLocation?.lng || 99.840576;
+
+        // สร้างแผนที่ใหม่
+        const map = L.map('interactive-map', { zoomControl: false }).setView([lat, lng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+        // ดักจับเหตุการณ์ตอน "เลื่อนแผนที่เสร็จ"
+        map.on('moveend', () => {
+          const center = map.getCenter();
+          setUserLocation({ lat: center.lat, lng: center.lng });
+          // สร้างลิงก์ Google Maps จากพิกัดใหม่
+          setMapLink(`https://maps.google.com/?q=${center.lat},${center.lng}`);
+        });
+
+        mapInstanceRef.current = map;
+      };
+
+      // ดึงไลบรารีแผนที่มาฝังในหน้าเว็บชั่วคราว
+      if (!(window as any).L) {
+        if (!document.getElementById('leaflet-css')) {
+          const link = document.createElement('link');
+          link.id = 'leaflet-css';
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+        if (!document.getElementById('leaflet-js')) {
+          const script = document.createElement('script');
+          script.id = 'leaflet-js';
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.onload = initMap;
+          document.head.appendChild(script);
+        }
+      } else {
+        initMap();
+      }
+
+      return () => {
+         if (mapInstanceRef.current) {
+             mapInstanceRef.current.remove();
+             mapInstanceRef.current = null;
+         }
+      };
+    }
+  }, [showMap]);
 
   // --- ฐานข้อมูลสินค้า ---
   const products = [
@@ -122,20 +190,25 @@ export default function HomePage() {
     setTimeout(() => { setToastMessage(""); }, 2000);
   };
 
-  // 🌟 ฟังก์ชันดึง GPS และแสดงแผนที่จริง
+  // 🌟 (อัปเกรด) ปุ่มดึงพิกัด GPS แล้วให้แผนที่บินตามไป
   const handleGetLocation = () => {
     if (navigator.geolocation) {
-      showToast("⏳ กำลังโหลดแผนที่...");
+      showToast("⏳ กำลังหาตำแหน่งปัจจุบันของคุณ...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude }); // เก็บพิกัดไว้สร้างแผนที่
-          const link = `https://maps.google.com/?q=${latitude},${longitude}`;
-          setMapLink(link);
-          showToast("📍 ปักหมุดสำเร็จ!");
+          setUserLocation({ lat: latitude, lng: longitude });
+          setMapLink(`https://maps.google.com/?q=${latitude},${longitude}`);
+
+          // สั่งให้แผนที่บินไปหาพิกัดใหม่
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([latitude, longitude], 17, { animate: true, duration: 1.5 });
+          }
+          showToast("📍 บินมาถึงตำแหน่งของคุณแล้ว!");
+          setShowMap(true); 
         },
         (error) => {
-          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
+          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
         },
         { enableHighAccuracy: true }
       );
@@ -254,7 +327,7 @@ export default function HomePage() {
       )}
 
       {/* 1. Navbar */}
-      <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-50 shadow-sm gap-y-3">
+      <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm gap-y-3">
         
         <div className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f]">
           <div className="bg-[#0a4a2f] p-1.5 md:p-2 rounded-full border-2 border-[#f3c623]">
@@ -290,6 +363,7 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* 🔍 ช่องค้นหาสินค้า */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             ref={searchInputRef}
@@ -310,8 +384,9 @@ export default function HomePage() {
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
+          {/* 🔽 Dropdown แสดงผลลัพธ์ */}
           {searchQuery && isSearchFocused && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] max-h-[50vh] overflow-y-auto">
+            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[50] max-h-[50vh] overflow-y-auto">
               {filteredProducts.length > 0 ? (
                 filteredProducts.map(item => (
                   <div 
@@ -372,6 +447,8 @@ export default function HomePage() {
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
+                  
+                  {/* รูปภาพแนวนอนบนมือถือ */}
                   <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -483,7 +560,7 @@ export default function HomePage() {
 
       {/* --- Modal ตะกร้าสินค้า และ หน้าจัดส่ง/ชำระเงิน --- */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
             <div className="bg-[#0a4a2f] p-4 px-5 md:px-6 text-white flex justify-between items-center sticky top-0 z-20">
               <h2 className="text-lg md:text-xl font-bold text-[#f3c623] flex items-center gap-2">
@@ -543,7 +620,7 @@ export default function HomePage() {
                   </div>
                 )
               ) : (
-                <div className="space-y-4 md:space-y-6">
+                <div className="space-y-4 md:space-y-6 relative">
                   
                   <div className="bg-green-50/70 p-3 md:p-4 rounded-2xl border border-green-200 space-y-3">
                     <div className="flex items-center justify-between border-b border-green-200 pb-2">
@@ -573,16 +650,8 @@ export default function HomePage() {
 
                     <div className="space-y-1 text-[10px] md:text-xs text-gray-600 pt-2 border-t border-green-200/50">
                       <div className="flex justify-between">
-                        <span>ราคาสินค้ารวม:</span>
-                        <span className="font-semibold text-gray-800">฿{subtotal}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>ค่าบริการจัดส่ง:</span>
-                        <span className="font-semibold text-gray-800">฿{shippingFee}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-green-200 text-xs md:text-sm font-extrabold text-[#0a4a2f]">
-                        <span>ยอดชำระสุทธิ:</span>
-                        <span className="text-lg md:text-xl text-orange-600">฿{grandTotal}</span>
+                        <span>ยอดชำระสุทธิ (รวมส่ง):</span>
+                        <span className="text-lg md:text-xl text-orange-600 font-extrabold">฿{grandTotal}</span>
                       </div>
                     </div>
                   </div>
@@ -590,68 +659,51 @@ export default function HomePage() {
                   <div className="space-y-3">
                     <h3 className="text-xs md:text-sm font-bold text-gray-800 flex items-center gap-2">
                       <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      ระบุข้อมูลผู้รับสินค้า
-                      {!user && <span className="text-[9px] md:text-[10px] font-normal text-red-500 ml-auto">ไม่ได้เข้าสู่ระบบ</span>}
+                      ข้อมูลผู้รับสินค้า
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
-                      <input 
-                        type="text" 
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="ชื่อ-นามสกุล ผู้รับ *"
-                        className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
-                      />
-                      <input 
-                        type="tel" 
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="เบอร์โทรศัพท์ *"
-                        className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
-                      />
+                      <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="ชื่อ-นามสกุล *" className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
+                      <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรศัพท์ *" className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
                     </div>
 
-                    <textarea 
-                      value={addressDetail}
-                      onChange={(e) => setAddressDetail(e.target.value)}
-                      rows={2}
-                      className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
-                      placeholder="ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *"
-                    />
+                    <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล..." className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
                     
-                    {/* 🌟 ปุ่มปักหมุด และ แผนที่ Google Maps แบบเห็นภาพของจริง */}
+                    {/* 🌟 เปิดระบบแผนที่แบบเลื่อนปักหมุดตรงนี้เลย */}
                     <div className="flex flex-col gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleGetLocation}
-                        className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        {mapLink ? "📍 ดึงพิกัดสำเร็จ (คลิกดึงใหม่)" : "📍 กดดึงพิกัดแผนที่ (GPS)"}
-                      </button>
-                      
-                      {/* แผนที่โชว์ขึ้นมาเมื่อดึงพิกัดสำเร็จ */}
-                      {userLocation && (
-                        <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative animate-in fade-in zoom-in duration-300">
-                          <div className="bg-blue-600 text-white text-[10px] md:text-xs text-center py-1.5 font-bold">
-                            ตรวจสอบพิกัดจัดส่งของคุณ
+                      {!showMap ? (
+                        <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                          <svg className="w-4 h-4 md:w-5 md:h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                          {mapLink ? "📍 แก้ไขพิกัดปักหมุด" : "📍 เปิดแผนที่เพื่อปักหมุด (เลื่อนหาเองได้)"}
+                        </button>
+                      ) : (
+                        <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[350px] animate-in fade-in zoom-in duration-300">
+                          <div className="bg-[#0a4a2f] text-white text-xs md:text-sm text-center py-2 font-bold flex justify-between items-center px-4">
+                            <span>📍 ใช้นิ้วเลื่อนแผนที่ให้ตรงกับบ้านคุณ</span>
+                            <button onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
                           </div>
-                          <iframe
-                            width="100%"
-                            height="180"
-                            frameBorder="0"
-                            scrolling="no"
-                            marginHeight={0}
-                            marginWidth={0}
-                            src={`https://maps.google.com/maps?q=${userLocation.lat},${userLocation.lng}&hl=th&z=17&output=embed`}
-                          ></iframe>
-                          <div className="text-[9px] md:text-[10px] text-gray-500 text-center p-2 bg-gray-50">
-                            *พิกัดนี้จะถูกแนบไปกับออเดอร์เพื่อความแม่นยำในการจัดส่ง
+                          
+                          <div className="relative flex-1 w-full bg-gray-100">
+                            {/* กรอบแสดงแผนที่ของจริง */}
+                            <div id="interactive-map" className="absolute inset-0 z-0"></div>
+                            
+                            {/* หมุดแดงแบบ Fixed ไว้ตรงกลางจอเป๊ะๆ */}
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[1000] pointer-events-none drop-shadow-xl pb-2">
+                              <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                            </div>
+
+                            {/* ปุ่ม GPS ดึงตำแหน่งปัจจุบัน */}
+                            <button onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
+                               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+                            </button>
                           </div>
+
+                          <button onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                             ✅ ยืนยันพิกัดปักหมุดตรงนี้
+                          </button>
                         </div>
                       )}
                     </div>
-
                   </div>
 
                   <div className="space-y-3">
