@@ -31,11 +31,11 @@ export default function HomePage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
   
-  // 🌟 (อัปเกรด) สถานะระบบแผนที่แบบเลื่อนปักหมุด
+  // สถานะระบบแผนที่แบบเลื่อนปักหมุด
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [showMap, setShowMap] = useState(false); // ควบคุมการเปิด/ปิดหน้าต่างแผนที่
-  const mapInstanceRef = useRef<any>(null); // เก็บตัวแปรของแผนที่
+  const [showMap, setShowMap] = useState(false); 
+  const mapInstanceRef = useRef<any>(null); 
 
   // โหลดข้อมูลผู้ใช้
   useEffect(() => {
@@ -77,17 +77,14 @@ export default function HomePage() {
         const L = (window as any).L;
         if (!L) return;
 
-        // ถ้ามีแผนที่เก่าค้างอยู่ ให้ลบทิ้งก่อน
         if (mapInstanceRef.current) {
           mapInstanceRef.current.remove();
           mapInstanceRef.current = null;
         }
 
-        // ตั้งค่าพิกัดเริ่มต้น (ถ้ายังไม่มีพิกัด ให้ไปเริ่มที่เชียงราย)
         const lat = userLocation?.lat || 19.910480;
         const lng = userLocation?.lng || 99.840576;
 
-        // สร้างแผนที่ใหม่
         const map = L.map('interactive-map', { zoomControl: false }).setView([lat, lng], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
@@ -96,18 +93,15 @@ export default function HomePage() {
 
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-        // ดักจับเหตุการณ์ตอน "เลื่อนแผนที่เสร็จ"
         map.on('moveend', () => {
           const center = map.getCenter();
           setUserLocation({ lat: center.lat, lng: center.lng });
-          // สร้างลิงก์ Google Maps จากพิกัดใหม่
           setMapLink(`https://maps.google.com/?q=${center.lat},${center.lng}`);
         });
 
         mapInstanceRef.current = map;
       };
 
-      // ดึงไลบรารีแผนที่มาฝังในหน้าเว็บชั่วคราว
       if (!(window as any).L) {
         if (!document.getElementById('leaflet-css')) {
           const link = document.createElement('link');
@@ -190,17 +184,16 @@ export default function HomePage() {
     setTimeout(() => { setToastMessage(""); }, 2000);
   };
 
-  // 🌟 (อัปเกรด) ปุ่มดึงพิกัด GPS แล้วให้แผนที่บินตามไป
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       showToast("⏳ กำลังหาตำแหน่งปัจจุบันของคุณ...");
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           setMapLink(`https://maps.google.com/?q=${latitude},${longitude}`);
 
-          // สั่งให้แผนที่บินไปหาพิกัดใหม่
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([latitude, longitude], 17, { animate: true, duration: 1.5 });
           }
@@ -208,9 +201,13 @@ export default function HomePage() {
           setShowMap(true); 
         },
         (error) => {
-          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
+          if (error.code === error.TIMEOUT) {
+            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้ใช้เมาส์เลื่อนแผนที่ปักหมุดเองได้เลยครับ!");
+          } else {
+            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือเลื่อนหมุดเองครับ");
+          }
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 } 
       );
     } else {
       alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
@@ -250,7 +247,7 @@ export default function HomePage() {
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
-  // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
+  // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase (ฉบับแก้ตัวแล้ว!) ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
@@ -262,7 +259,8 @@ export default function HomePage() {
       return;
     }
 
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
+    // ✅ ใส่ URL ใหม่ตามที่คุณส่งมาให้ล่าสุดแล้วครับ
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
 
@@ -276,20 +274,26 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      const { error: dbError } = await supabase.from('orders').insert({
+      // 1. บันทึกลง Supabase (ต้องใส่ .select() เพื่อขอดึงรหัส orderId กลับมาให้ชีต)
+      const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
         total_price: grandTotal,
         status: 'รอดำเนินการ'
-      });
+      }).select();
 
       if (dbError) throw dbError;
+      
+      const currentOrderId = newOrder[0].id; // ได้รหัสออเดอร์แล้ว!
 
+      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (แนบ action และ orderId ไปด้วย)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // ใช้ text/plain ป้องกันโดนเบราว์เซอร์บล็อก
         body: JSON.stringify({
+          action: "create", // ✅ สำคัญ! บอกชีตว่านี่คือการสร้างออเดอร์ใหม่
+          orderId: currentOrderId, // ✅ ส่งรหัสออเดอร์ไปลงในตาราง
           customerName: fullName,
           phone: phone,
           address: finalAddress, 
@@ -447,8 +451,6 @@ export default function HomePage() {
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
-                  
-                  {/* รูปภาพแนวนอนบนมือถือ */}
                   <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -669,7 +671,6 @@ export default function HomePage() {
 
                     <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล..." className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
                     
-                    {/* 🌟 เปิดระบบแผนที่แบบเลื่อนปักหมุดตรงนี้เลย */}
                     <div className="flex flex-col gap-2 pt-1">
                       {!showMap ? (
                         <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
@@ -684,15 +685,12 @@ export default function HomePage() {
                           </div>
                           
                           <div className="relative flex-1 w-full bg-gray-100">
-                            {/* กรอบแสดงแผนที่ของจริง */}
                             <div id="interactive-map" className="absolute inset-0 z-0"></div>
                             
-                            {/* หมุดแดงแบบ Fixed ไว้ตรงกลางจอเป๊ะๆ */}
                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[1000] pointer-events-none drop-shadow-xl pb-2">
                               <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                             </div>
 
-                            {/* ปุ่ม GPS ดึงตำแหน่งปัจจุบัน */}
                             <button onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
                             </button>
