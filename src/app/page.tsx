@@ -25,6 +25,9 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [toastMessage, setToastMessage] = useState(""); 
   
+  // 🌟 (ใหม่) สถานะสำหรับป๊อปอัปแจ้งเตือนกลางหน้าจอ
+  const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
+  
   // ฟอร์มข้อมูลจัดส่ง
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -202,31 +205,28 @@ export default function HomePage() {
         },
         (error) => {
           if (error.code === error.TIMEOUT) {
-            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้พิมพ์ที่อยู่แล้วกดค้นหาพิกัดครับ!");
+             setCustomAlert({ title: "หมดเวลาค้นหา", message: "ระบบค้นหาตำแหน่งนานเกินไป\nแนะนำให้พิมพ์ที่อยู่แล้วกด 'ค้นหาพิกัด' ครับ", type: "error" });
           } else {
-            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือพิมพ์ค้นหาพิกัดเองครับ");
+             setCustomAlert({ title: "ไม่สามารถดึงตำแหน่งได้", message: "กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location)\nหรือพิมพ์ค้นหาพิกัดเองครับ", type: "error" });
           }
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 } 
       );
     } else {
-      alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
+      setCustomAlert({ title: "ไม่รองรับการทำงาน", message: "เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ", type: "error" });
     }
   };
 
-  // 🌟 ฟังก์ชันฉลาดค้นหาพิกัด (อัปเกรดความแม่นยำ)
   const handleSearchAddress = async () => {
     if (!addressDetail.trim()) {
-      alert("กรุณาพิมพ์ที่อยู่ในช่องก่อนกดค้นหาครับ");
+      setCustomAlert({ title: "ข้อมูลไม่ครบถ้วน", message: "กรุณาพิมพ์ที่อยู่ในช่องก่อนกดค้นหาครับ", type: "error" });
       return;
     }
     showToast("⏳ กำลังค้นหาพิกัดจากที่อยู่...");
     try {
-      // 1. ลองค้นหาจากข้อความเต็มก่อน (รองรับบ้านเลขที่ ซอย ถนน ถ้าแผนที่ OSM รู้จัก)
       let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressDetail)}`);
       let data = await res.json();
       
-      // 2. ถ้าไม่เจอ ค้นหาแบบกว้างขึ้นโดยดึงตั้งแต่คำว่า "ตำบล/แขวง" เป็นต้นไป
       if (!data || data.length === 0) {
         const subDistrictMatch = addressDetail.match(/(ตำบล|ต\.|แขวง).*$/);
         if (subDistrictMatch) {
@@ -236,7 +236,6 @@ export default function HomePage() {
         }
       }
 
-      // 3. ถ้ายังไม่เจออีก ให้ดึงแค่ อำเภอ/เขต และ จังหวัด
       if (!data || data.length === 0) {
         const districtMatch = addressDetail.match(/(อำเภอ|เขต|อ\.).*?(จังหวัด|จ\.).*?(\s|$)/);
         if (districtMatch) {
@@ -258,10 +257,10 @@ export default function HomePage() {
         showToast("📍 เจอพิกัดใกล้เคียงแล้ว! (ใช้นิ้วเลื่อนปรับให้ตรงบ้านอีกนิดนะครับ)");
         setShowMap(true);
       } else {
-        alert("❌ แผนที่หาพิกัดไม่พบ ลองตรวจตัวสะกดชื่อ ตำบล อำเภอ จังหวัด อีกครั้งครับ");
+        setCustomAlert({ title: "หาพิกัดไม่พบ", message: "ลองตรวจตัวสะกดชื่อ ตำบล อำเภอ จังหวัด อีกครั้งครับ", type: "error" });
       }
     } catch (error) {
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อแผนที่ครับ");
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์แผนที่ได้", type: "error" });
     }
   };
 
@@ -274,7 +273,7 @@ export default function HomePage() {
     if (!error) {
       showToast("✅ บันทึกที่อยู่นี้เป็นค่าเริ่มต้นเรียบร้อยแล้ว!");
     } else {
-      alert("เกิดข้อผิดพลาดในการบันทึกครับ");
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถบันทึกข้อมูลที่อยู่ได้", type: "error" });
     }
   };
 
@@ -314,18 +313,19 @@ export default function HomePage() {
   // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
-      alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
+      setCustomAlert({ title: "ข้อมูลไม่ครบถ้วน", message: "กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์\nและที่อยู่จัดส่งให้ครบถ้วนครับ", type: "error" });
       return;
     }
 
     if (!user) {
-      alert("กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อครับ");
+      setCustomAlert({ title: "ยังไม่ได้เข้าสู่ระบบ", message: "กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อครับ", type: "error" });
       return;
     }
 
     const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
-    showToast("กำลังส่งคำสั่งซื้อของคุณ...");
+    // 🌟 1. เปิดหน้าป๊อปอัปหมุนโหลดติ้วๆ ก่อนเลย บล็อกหน้าจอไว้
+    setCustomAlert({ title: "กำลังดำเนินการ...", message: "โปรดรอสักครู่ ระบบกำลังส่งคำสั่งซื้อของคุณ", type: "loading" });
 
     let finalAddress = addressDetail;
     if (mapLink) {
@@ -367,20 +367,30 @@ export default function HomePage() {
         }),
       });
 
-      if (paymentMethod === "qr") {
-        alert(`บันทึกคำสั่งซื้อสำเร็จ!\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`);
-      } else {
-        alert(`บันทึกคำสั่งซื้อแบบเก็บเงินปลายทางสำเร็จ!\nกรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานจัดส่งครับ\n\n${fullAddressText}`);
-      }
-      
+      // ปิดหน้าตะกร้าต่างๆ
       setCart({});
       setMapLink(""); 
       setUserLocation(null);
       setIsCartOpen(false);
       setShowPayment(false);
 
+      // 🌟 2. เปลี่ยนสถานะป๊อปอัปเป็นแจ้งเตือนว่า "สำเร็จแล้ว"
+      if (paymentMethod === "qr") {
+        setCustomAlert({
+          title: "สั่งซื้อสำเร็จ! 🎉",
+          message: `บันทึกคำสั่งซื้อเรียบร้อยแล้ว\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`,
+          type: "success"
+        });
+      } else {
+        setCustomAlert({
+          title: "สั่งซื้อสำเร็จ! 🎉",
+          message: `กรุณาเตรียมเงินสด ฿${grandTotal} ไว้ชำระกับพนักงานจัดส่งเมื่อสินค้าถึงมือครับ\n\n${fullAddressText}`,
+          type: "success"
+        });
+      }
+
     } catch (error) {
-      alert("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้งครับ");
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถส่งข้อมูลคำสั่งซื้อได้ กรุณาลองใหม่อีกครั้งครับ", type: "error" });
       console.error(error);
     }
   };
@@ -391,6 +401,45 @@ export default function HomePage() {
       {toastMessage && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#0a4a2f] text-[#f3c623] px-6 py-3 rounded-full shadow-2xl z-[100] font-bold text-sm flex items-center gap-2 animate-bounce">
           {toastMessage}
+        </div>
+      )}
+
+      {/* 🌟 ป๊อปอัปแจ้งเตือน (Modal) เต็มหน้าจอ */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 md:p-8 text-center flex flex-col items-center relative animate-in fade-in zoom-in duration-200">
+            
+            {/* ไอคอนหมุนโหลด หรือ เครื่องหมายถูก/ผิด */}
+            {customAlert.type === 'loading' && (
+              <div className="w-16 h-16 border-4 border-gray-100 border-t-[#0a4a2f] rounded-full animate-spin mb-4"></div>
+            )}
+            {customAlert.type === 'success' && (
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+            )}
+            {customAlert.type === 'error' && (
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </div>
+            )}
+
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{customAlert.title}</h3>
+            
+            <div className="text-gray-600 text-sm mb-6 whitespace-pre-line leading-relaxed text-left inline-block w-full max-h-48 overflow-y-auto">
+              {customAlert.message}
+            </div>
+
+            {/* ถ้ากำลังโหลดอยู่ จะซ่อนปุ่มตกลง เพื่อไม่ให้ลูกค้ากดปิด */}
+            {customAlert.type !== 'loading' && (
+              <button 
+                onClick={() => setCustomAlert(null)}
+                className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md ${customAlert.type === 'success' ? 'bg-[#0a4a2f] hover:bg-[#073622]' : 'bg-red-500 hover:bg-red-600'}`}
+              >
+                ตกลง
+              </button>
+            )}
+          </div>
         </div>
       )}
 
