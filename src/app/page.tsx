@@ -202,9 +202,9 @@ export default function HomePage() {
         },
         (error) => {
           if (error.code === error.TIMEOUT) {
-            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้พิมพ์ชื่อจังหวัดแล้วกดค้นหาครับ!");
+            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้พิมพ์ที่อยู่แล้วกดค้นหาพิกัดครับ!");
           } else {
-            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือพิมพ์ค้นหาเองครับ");
+            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือพิมพ์ค้นหาพิกัดเองครับ");
           }
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 } 
@@ -214,7 +214,7 @@ export default function HomePage() {
     }
   };
 
-  // 🌟 ฟังก์ชันฉลาดค้นหาพิกัด (กรองเอาเฉพาะ อำเภอ และ จังหวัด)
+  // 🌟 ฟังก์ชันฉลาดค้นหาพิกัด (อัปเกรดความแม่นยำ)
   const handleSearchAddress = async () => {
     if (!addressDetail.trim()) {
       alert("กรุณาพิมพ์ที่อยู่ในช่องก่อนกดค้นหาครับ");
@@ -222,26 +222,28 @@ export default function HomePage() {
     }
     showToast("⏳ กำลังค้นหาพิกัดจากที่อยู่...");
     try {
-      // ลองค้นหาจากข้อความเต็มก่อน
+      // 1. ลองค้นหาจากข้อความเต็มก่อน (รองรับบ้านเลขที่ ซอย ถนน ถ้าแผนที่ OSM รู้จัก)
       let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressDetail)}`);
       let data = await res.json();
       
-      // ถ้าแผนที่หาที่อยู่แบบเต็มๆ (มีบ้านเลขที่) ไม่เจอ ให้ตัดคำฉลาดๆ
+      // 2. ถ้าไม่เจอ ค้นหาแบบกว้างขึ้นโดยดึงตั้งแต่คำว่า "ตำบล/แขวง" เป็นต้นไป
       if (!data || data.length === 0) {
-        // ใช้ Regex สกัดเอาแค่คำที่ต่อท้าย อำเภอ เขต ตำบล จังหวัด
-        const match = addressDetail.match(/(อำเภอ|เขต|อ\.|ตำบล|แขวง|ต\.)\s*([ก-๙a-zA-Z]+).*?(จังหวัด|จ\.)\s*([ก-๙a-zA-Z]+)/);
-        let shortQuery = "";
-        
-        if (match) {
-           shortQuery = `${match[2]} ${match[4]} Thailand`; // ได้ชื่ออำเภอ และจังหวัด
-        } else {
-           // ถ้าไม่มีคำว่า อำเภอ/จังหวัด ให้ลบตัวเลขทิ้ง แล้วดึง 3 คำสุดท้ายมาหา
-           const words = addressDetail.replace(/[0-9/.,-]/g, ' ').split(/\s+/).filter(w => w.trim().length > 1);
-           shortQuery = words.slice(-3).join(" ") + " Thailand";
+        const subDistrictMatch = addressDetail.match(/(ตำบล|ต\.|แขวง).*$/);
+        if (subDistrictMatch) {
+           const query = subDistrictMatch[0] + " Thailand";
+           res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+           data = await res.json();
         }
+      }
 
-        res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(shortQuery)}`);
-        data = await res.json();
+      // 3. ถ้ายังไม่เจออีก ให้ดึงแค่ อำเภอ/เขต และ จังหวัด
+      if (!data || data.length === 0) {
+        const districtMatch = addressDetail.match(/(อำเภอ|เขต|อ\.).*?(จังหวัด|จ\.).*?(\s|$)/);
+        if (districtMatch) {
+           const query = districtMatch[0] + " Thailand";
+           res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+           data = await res.json();
+        }
       }
 
       if (data && data.length > 0) {
@@ -251,19 +253,18 @@ export default function HomePage() {
         setMapLink(`https://maps.google.com/?q=${lat},${lng}`);
         
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([lat, lng], 15, { animate: true, duration: 1.5 });
+          mapInstanceRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
         }
-        showToast("📍 เจอพิกัดพื้นที่ใกล้เคียงแล้ว! (เลื่อนเป้าให้ตรงบ้านอีกนิดนะครับ)");
+        showToast("📍 เจอพิกัดใกล้เคียงแล้ว! (ใช้นิ้วเลื่อนปรับให้ตรงบ้านอีกนิดนะครับ)");
         setShowMap(true);
       } else {
-        alert("❌ แผนที่หาพิกัดไม่พบ ลองตรวจตัวสะกดชื่อจังหวัด หรือกด 'เปิดแผนที่' แล้วใช้นิ้วเลื่อนหาเองได้เลยครับ");
+        alert("❌ แผนที่หาพิกัดไม่พบ ลองตรวจตัวสะกดชื่อ ตำบล อำเภอ จังหวัด อีกครั้งครับ");
       }
     } catch (error) {
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อแผนที่ครับ");
     }
   };
 
-  // 🌟 ฟังก์ชันเซฟที่อยู่ด่วนจากหน้าตะกร้า
   const handleQuickSaveAddress = async () => {
     if (!user) return;
     showToast("⏳ กำลังบันทึกข้อมูล...");
@@ -336,7 +337,6 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // บันทึกลง Supabase
       const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
@@ -347,12 +347,10 @@ export default function HomePage() {
       if (dbError) throw dbError;
       const currentOrderId = newOrder[0].id; 
 
-      // 🌟 แอบอัปเดตที่อยู่ให้ลูกค้าอัตโนมัติ (เผื่อลืมกดปุ่มเซฟ)
       await supabase.auth.updateUser({
         data: { fullName, phone, addressDetail, mapLink, userLocation }
       });
 
-      // ส่งข้อมูลเข้า Google Sheets
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -376,6 +374,8 @@ export default function HomePage() {
       }
       
       setCart({});
+      setMapLink(""); 
+      setUserLocation(null);
       setIsCartOpen(false);
       setShowPayment(false);
 
@@ -733,7 +733,6 @@ export default function HomePage() {
 
                     <div className="space-y-1">
                       <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด..." className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
-                      {/* ✅ ปุ่มเซฟที่อยู่ให้เลยตรงนี้ ไม่ต้องกลับไปหน้าตั้งค่า */}
                       <div className="flex justify-between items-center px-1">
                         <span className="text-[9px] md:text-[10px] text-gray-500">💡 พิมพ์ที่อยู่เต็ม แล้วกดค้นหาพิกัดด้านล่างได้เลย</span>
                         {user && (
@@ -744,11 +743,10 @@ export default function HomePage() {
                       </div>
                     </div>
                     
-                    {/* 🌟 ระบบค้นหาพิกัดฉลาดๆ จากข้อความที่อยู่ */}
                     <div className="flex flex-col gap-2 pt-1">
                       <div className="flex gap-2">
                         <button type="button" onClick={handleSearchAddress} className="flex-1 p-2.5 rounded-xl border bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 text-xs md:text-sm font-bold transition flex items-center justify-center gap-2">
-                          🔍 ค้นหาพิกัดจากที่อยู่ (ดึงจังหวัด/อำเภอให้)
+                          🔍 ค้นหาพิกัดจากที่อยู่
                         </button>
                       </div>
 
@@ -761,7 +759,7 @@ export default function HomePage() {
                         <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[350px] animate-in fade-in zoom-in duration-300">
                           <div className="bg-[#0a4a2f] text-white text-xs md:text-sm text-center py-2 font-bold flex justify-between items-center px-4">
                             <span>📍 ใช้นิ้วเลื่อนแผนที่ให้ตรงกับบ้านคุณ</span>
-                            <button onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
+                            <button type="button" onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
                           </div>
                           
                           <div className="relative flex-1 w-full bg-gray-100">
@@ -771,12 +769,12 @@ export default function HomePage() {
                               <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                             </div>
 
-                            <button onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
+                            <button type="button" onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
                             </button>
                           </div>
 
-                          <button onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                          <button type="button" onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
                              ✅ ยืนยันพิกัดปักหมุดตรงนี้
                           </button>
                         </div>
