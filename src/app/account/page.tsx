@@ -17,6 +17,9 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
+  // 🌟 แจ้งเตือนแบบป๊อปอัป (Toast)
+  const [toastMessage, setToastMessage] = useState(""); 
+
   // 🌟 สถานะระบบแผนที่แบบเลื่อนปักหมุด
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -117,9 +120,15 @@ export default function AccountPage() {
     }
   }, [showMap, userLocation]);
 
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => { setToastMessage(""); }, 2000);
+  };
+
   // ดึงตำแหน่งปัจจุบัน
   const handleGetLocation = () => {
     if (navigator.geolocation) {
+      showToast("⏳ กำลังหาตำแหน่งปัจจุบันของคุณ...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
@@ -129,11 +138,12 @@ export default function AccountPage() {
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([latitude, longitude], 17, { animate: true, duration: 1.5 });
           }
+          showToast("📍 บินมาถึงตำแหน่งของคุณแล้ว!");
           setShowMap(true); 
         },
         (error) => {
           if (error.code === error.TIMEOUT) {
-            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้ใช้เมาส์เลื่อนแผนที่ปักหมุดเองได้เลยครับ!");
+            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้พิมพ์ที่อยู่แล้วกดค้นหาพิกัดครับ!");
           } else {
             alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
           }
@@ -145,24 +155,71 @@ export default function AccountPage() {
     }
   };
 
+  // 🌟 ฟังก์ชันค้นหาพิกัดจากที่อยู่ (เหมือนหน้าหลัก)
+  const handleSearchAddress = async () => {
+    if (!addressDetail.trim()) {
+      alert("กรุณาพิมพ์ที่อยู่ในช่องก่อนกดค้นหาครับ");
+      return;
+    }
+    showToast("⏳ กำลังค้นหาพิกัดจากที่อยู่...");
+    try {
+      let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressDetail)}`);
+      let data = await res.json();
+      
+      if (!data || data.length === 0) {
+        const subDistrictMatch = addressDetail.match(/(ตำบล|ต\.|แขวง).*$/);
+        if (subDistrictMatch) {
+           const query = subDistrictMatch[0] + " Thailand";
+           res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+           data = await res.json();
+        }
+      }
+
+      if (!data || data.length === 0) {
+        const districtMatch = addressDetail.match(/(อำเภอ|เขต|อ\.).*?(จังหวัด|จ\.).*?(\s|$)/);
+        if (districtMatch) {
+           const query = districtMatch[0] + " Thailand";
+           res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+           data = await res.json();
+        }
+      }
+
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setUserLocation({ lat, lng });
+        setMapLink(`https://maps.google.com/?q=${lat},${lng}`);
+        
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
+        }
+        showToast("📍 เจอพิกัดใกล้เคียงแล้ว! (ใช้นิ้วเลื่อนปรับให้ตรงบ้านอีกนิดนะครับ)");
+        setShowMap(true);
+      } else {
+        alert("❌ แผนที่หาพิกัดไม่พบ ลองตรวจตัวสะกดชื่อ ตำบล อำเภอ จังหวัด อีกครั้งครับ");
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อแผนที่ครับ");
+    }
+  };
+
   // 🌟 บันทึกข้อมูลที่อยู่ และพิกัดแผนที่ลงฐานข้อมูล
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     
     const { error } = await supabase.auth.updateUser({
-      data: { fullName, phone, addressDetail, mapLink, userLocation } // บันทึกพิกัดด้วย
+      data: { fullName, phone, addressDetail, mapLink, userLocation }
     });
 
     if (error) {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
     } else {
-      alert("✅ บันทึกข้อมูลที่อยู่และพิกัดสำเร็จ! เวลาสั่งซื้อระบบจะดึงไปใช้อัตโนมัติครับ");
+      showToast("✅ บันทึกที่อยู่สำเร็จ! เวลาสั่งซื้อระบบจะดึงไปใช้อัตโนมัติครับ");
     }
     setSaving(false);
   };
 
-  // 🌟 (โบนัส) ฟังก์ชันยกเลิกคำสั่งซื้อ
   const handleCancelOrder = async (orderId: number) => {
     const confirmCancel = window.confirm("คุณต้องการยกเลิกคำสั่งซื้อนี้ใช่หรือไม่?");
     if (!confirmCancel) return;
@@ -175,8 +232,18 @@ export default function AccountPage() {
     if (error) {
       alert("ไม่สามารถยกเลิกคำสั่งซื้อได้: " + error.message);
     } else {
-      alert("✅ ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
-      // อัปเดตสถานะในหน้าจอทันทีโดยไม่ต้องรีเฟรชหน้า
+      const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
+      fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "cancel",
+          orderId: orderId
+        })
+      }).catch(console.error);
+
+      showToast("✅ ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ยกเลิกแล้ว' } : o));
     }
   };
@@ -189,8 +256,15 @@ export default function AccountPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans">กำลังโหลดข้อมูล...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans pb-20">
+    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans pb-20 relative">
       
+      {/* 🌟 แสดงข้อความแจ้งเตือน (Toast) เหมือนในหน้าแรก */}
+      {toastMessage && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#0a4a2f] text-[#f3c623] px-6 py-3 rounded-full shadow-2xl z-[100] font-bold text-sm flex items-center gap-2 animate-bounce">
+          {toastMessage}
+        </div>
+      )}
+
       <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
         <Link href="/" className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f] hover:opacity-80 transition">
           <span className="text-2xl">←</span> กลับหน้าหลัก
@@ -233,8 +307,16 @@ export default function AccountPage() {
                 <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={3} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์" className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" />
               </div>
 
-              {/* 🌟 ระบบปักหมุดในหน้าบัญชี */}
+              {/* 🌟 ระบบค้นหาพิกัดและปักหมุดในหน้าบัญชี */}
               <div className="flex flex-col gap-2 pt-1">
+                
+                {/* 🔍 ปุ่มค้นหาพิกัด */}
+                <div className="flex gap-2">
+                  <button type="button" onClick={handleSearchAddress} className="flex-1 p-2.5 rounded-xl border bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 text-sm font-bold transition flex items-center justify-center gap-2">
+                    🔍 ค้นหาพิกัดจากที่อยู่
+                  </button>
+                </div>
+
                 {!showMap ? (
                   <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-bold transition ${mapLink ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                     <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -259,7 +341,7 @@ export default function AccountPage() {
                       </button>
                     </div>
 
-                    <button type="button" onClick={() => setShowMap(false)} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-2.5 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                    <button type="button" onClick={() => { setShowMap(false); showToast("✅ ยืนยันพิกัดแล้ว กดปุ่ม 'บันทึกที่อยู่' สีเขียวเข้มด้านล่างด้วยนะครับ"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-2.5 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
                        ✅ ยืนยันพิกัดปักหมุด
                     </button>
                   </div>
