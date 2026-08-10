@@ -31,8 +31,9 @@ export default function HomePage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
   
-  // 🌟 (ใหม่) สถานะเก็บลิงก์ Google Maps
+  // 🌟 พิกัดแผนที่สำหรับโชว์ Google Maps ของจริง
   const [mapLink, setMapLink] = useState("");
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   // โหลดข้อมูลผู้ใช้
   useEffect(() => {
@@ -121,22 +122,22 @@ export default function HomePage() {
     setTimeout(() => { setToastMessage(""); }, 2000);
   };
 
-  // 🌟 (ใหม่) ฟังก์ชันสำหรับดึงพิกัด GPS ของลูกค้า
+  // 🌟 ฟังก์ชันดึง GPS และแสดงแผนที่จริง
   const handleGetLocation = () => {
     if (navigator.geolocation) {
-      showToast("⏳ กำลังหาพิกัดของคุณ...");
+      showToast("⏳ กำลังโหลดแผนที่...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          // แปลงพิกัดเป็นลิงก์ Google Maps
+          setUserLocation({ lat: latitude, lng: longitude }); // เก็บพิกัดไว้สร้างแผนที่
           const link = `https://maps.google.com/?q=${latitude},${longitude}`;
           setMapLink(link);
           showToast("📍 ปักหมุดสำเร็จ!");
         },
         (error) => {
-          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
+          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
         },
-        { enableHighAccuracy: true } // ขอพิกัดแบบแม่นยำสูง
+        { enableHighAccuracy: true }
       );
     } else {
       alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
@@ -192,10 +193,9 @@ export default function HomePage() {
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
 
-    // 🌟 เอาลิงก์แผนที่มารวมไว้ในที่อยู่ (ถ้าลูกค้ากดปักหมุด)
     let finalAddress = addressDetail;
     if (mapLink) {
-      finalAddress += `\n📍 พิกัด GPS (Google Maps): ${mapLink}`;
+      finalAddress += `\n📍 พิกัดแผนที่: ${mapLink}`;
     }
 
     const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
@@ -212,7 +212,6 @@ export default function HomePage() {
 
       if (dbError) throw dbError;
 
-      // ส่งข้อมูลไปที่ Google Sheets (พร้อมลิงก์ Google Maps)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -220,7 +219,7 @@ export default function HomePage() {
         body: JSON.stringify({
           customerName: fullName,
           phone: phone,
-          address: finalAddress, // ใช้ที่อยู่ที่มีลิงก์แนบไปด้วย
+          address: finalAddress, 
           orderItems: orderListText,
           totalPrice: grandTotal,
           paymentMethod: paymentTypeText
@@ -234,7 +233,8 @@ export default function HomePage() {
       }
       
       setCart({});
-      setMapLink(""); // ล้างลิงก์แผนที่
+      setMapLink(""); 
+      setUserLocation(null);
       setIsCartOpen(false);
       setShowPayment(false);
 
@@ -290,7 +290,6 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 🔍 ช่องค้นหาสินค้า */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             ref={searchInputRef}
@@ -311,7 +310,6 @@ export default function HomePage() {
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
-          {/* 🔽 Dropdown แสดงผลลัพธ์ */}
           {searchQuery && isSearchFocused && (
             <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] max-h-[50vh] overflow-y-auto">
               {filteredProducts.length > 0 ? (
@@ -374,8 +372,6 @@ export default function HomePage() {
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
-                  
-                  {/* รูปภาพปรับเป็นแนวนอนบนมือถือ */}
                   <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -622,11 +618,8 @@ export default function HomePage() {
                       className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50"
                       placeholder="ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *"
                     />
-                    {user && (
-                      <p className="text-[10px] md:text-xs text-gray-500 text-right">💡 ดึงข้อมูลที่อยู่มาจากบัญชีของคุณอัตโนมัติ</p>
-                    )}
                     
-                    {/* 🌟 ปุ่มปักหมุด GPS ที่ขอเพิ่มครับ */}
+                    {/* 🌟 ปุ่มปักหมุด และ แผนที่ Google Maps แบบเห็นภาพของจริง */}
                     <div className="flex flex-col gap-2 pt-1">
                       <button
                         type="button"
@@ -634,9 +627,29 @@ export default function HomePage() {
                         className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
                       >
                         <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        {mapLink ? "📍 ปักหมุดสำเร็จ (คลิกเพื่อทำใหม่)" : "📍 กดเพื่อปักหมุดตำแหน่งปัจจุบัน"}
+                        {mapLink ? "📍 ดึงพิกัดสำเร็จ (คลิกดึงใหม่)" : "📍 กดดึงพิกัดแผนที่ (GPS)"}
                       </button>
-                      {mapLink && <p className="text-[9px] md:text-[10px] text-blue-600 text-center truncate">พิกัด: {mapLink}</p>}
+                      
+                      {/* แผนที่โชว์ขึ้นมาเมื่อดึงพิกัดสำเร็จ */}
+                      {userLocation && (
+                        <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative animate-in fade-in zoom-in duration-300">
+                          <div className="bg-blue-600 text-white text-[10px] md:text-xs text-center py-1.5 font-bold">
+                            ตรวจสอบพิกัดจัดส่งของคุณ
+                          </div>
+                          <iframe
+                            width="100%"
+                            height="180"
+                            frameBorder="0"
+                            scrolling="no"
+                            marginHeight={0}
+                            marginWidth={0}
+                            src={`https://maps.google.com/maps?q=${userLocation.lat},${userLocation.lng}&hl=th&z=17&output=embed`}
+                          ></iframe>
+                          <div className="text-[9px] md:text-[10px] text-gray-500 text-center p-2 bg-gray-50">
+                            *พิกัดนี้จะถูกแนบไปกับออเดอร์เพื่อความแม่นยำในการจัดส่ง
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>
