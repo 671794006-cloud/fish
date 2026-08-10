@@ -37,7 +37,7 @@ export default function HomePage() {
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null); 
 
-  // โหลดข้อมูลผู้ใช้
+  // โหลดข้อมูลผู้ใช้ (✅ แก้ไขให้ดึงพิกัดเก่าที่เคยบันทึกมาด้วย)
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.defaultMuted = true;
@@ -54,6 +54,9 @@ export default function HomePage() {
           if (meta.fullName) setFullName(meta.fullName);
           if (meta.phone) setPhone(meta.phone);
           if (meta.addressDetail) setAddressDetail(meta.addressDetail);
+          // ✅ ดึงพิกัดที่ลูกค้าเคยปักหมุดไว้ในหน้า "บัญชีของฉัน" มาใช้
+          if (meta.userLocation) setUserLocation(meta.userLocation);
+          if (meta.mapLink) setMapLink(meta.mapLink);
         }
       }
     };
@@ -82,6 +85,7 @@ export default function HomePage() {
           mapInstanceRef.current = null;
         }
 
+        // ✅ ถ้ามีพิกัดเก่า จะเริ่มที่พิกัดเก่า ถ้าไม่มีจะเริ่มที่เชียงราย
         const lat = userLocation?.lat || 19.910480;
         const lng = userLocation?.lng || 99.840576;
 
@@ -184,16 +188,15 @@ export default function HomePage() {
     setTimeout(() => { setToastMessage(""); }, 2000);
   };
 
+  // ดึง GPS ตำแหน่งปัจจุบัน
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       showToast("⏳ กำลังหาตำแหน่งปัจจุบันของคุณ...");
-      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           setMapLink(`https://maps.google.com/?q=${latitude},${longitude}`);
-
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([latitude, longitude], 17, { animate: true, duration: 1.5 });
           }
@@ -202,15 +205,46 @@ export default function HomePage() {
         },
         (error) => {
           if (error.code === error.TIMEOUT) {
-            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้ใช้เมาส์เลื่อนแผนที่ปักหมุดเองได้เลยครับ!");
+            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้พิมพ์ชื่อจังหวัดแล้วกดค้นหาครับ!");
           } else {
-            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือเลื่อนหมุดเองครับ");
+            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตให้เว็บเข้าถึงตำแหน่ง (Location) หรือพิมพ์ค้นหาเองครับ");
           }
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 } 
       );
     } else {
       alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
+    }
+  };
+
+  // 🌟 (ใหม่) ฟังก์ชันแปลข้อความที่อยู่ ให้เป็นพิกัดแผนที่ข้ามจังหวัด (Geocoding)
+  const handleSearchAddress = async () => {
+    if (!addressDetail.trim()) {
+      alert("กรุณาพิมพ์ชื่อ จังหวัด, อำเภอ หรือ ตำบล ในช่องที่อยู่ก่อนกดค้นหาครับ");
+      return;
+    }
+    showToast("⏳ กำลังค้นหาพิกัดจากที่อยู่...");
+    try {
+      // ใช้ API ฟรีของ OpenStreetMap ในการแปลข้อความให้เป็นพิกัด
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressDetail)}`);
+      const data = await res.json();
+      
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setUserLocation({ lat, lng });
+        setMapLink(`https://maps.google.com/?q=${lat},${lng}`);
+        
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([lat, lng], 15, { animate: true, duration: 1.5 });
+        }
+        showToast("📍 เจอพิกัดใกล้เคียงแล้ว! (ใช้นิ้วเลื่อนปรับให้ตรงบ้านอีกนิดนะครับ)");
+        setShowMap(true);
+      } else {
+        alert("❌ หาพิกัดไม่พบ ลองพิมพ์แค่ชื่อ 'ตำบล อำเภอ จังหวัด' สั้นๆ ดูก่อนครับ");
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์แผนที่ครับ");
     }
   };
 
@@ -247,7 +281,7 @@ export default function HomePage() {
   const shippingFee = totalItemsCount > 0 ? 40 : 0;
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
-  // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase (ฉบับแก้ตัวแล้ว!) ---
+  // --- ระบบส่งข้อมูลเข้า Google Sheets และ Supabase ---
   const handleConfirmOrder = async () => {
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
       alert("กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์ และที่อยู่จัดส่งให้ครบถ้วนครับ");
@@ -259,7 +293,6 @@ export default function HomePage() {
       return;
     }
 
-    // ✅ ใส่ URL ใหม่ตามที่คุณส่งมาให้ล่าสุดแล้วครับ
     const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
@@ -274,7 +307,6 @@ export default function HomePage() {
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
-      // 1. บันทึกลง Supabase (ต้องใส่ .select() เพื่อขอดึงรหัส orderId กลับมาให้ชีต)
       const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
         items: cartItems, 
@@ -284,16 +316,15 @@ export default function HomePage() {
 
       if (dbError) throw dbError;
       
-      const currentOrderId = newOrder[0].id; // ได้รหัสออเดอร์แล้ว!
+      const currentOrderId = newOrder[0].id; 
 
-      // 2. สั่งยิงข้อมูลไปที่ Google Sheets (แนบ action และ orderId ไปด้วย)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // ใช้ text/plain ป้องกันโดนเบราว์เซอร์บล็อก
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
         body: JSON.stringify({
-          action: "create", // ✅ สำคัญ! บอกชีตว่านี่คือการสร้างออเดอร์ใหม่
-          orderId: currentOrderId, // ✅ ส่งรหัสออเดอร์ไปลงในตาราง
+          action: "create", 
+          orderId: currentOrderId, 
           customerName: fullName,
           phone: phone,
           address: finalAddress, 
@@ -310,8 +341,6 @@ export default function HomePage() {
       }
       
       setCart({});
-      setMapLink(""); 
-      setUserLocation(null);
       setIsCartOpen(false);
       setShowPayment(false);
 
@@ -367,7 +396,6 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 🔍 ช่องค้นหาสินค้า */}
         <div className="w-full flex md:flex-1 md:w-auto max-w-xl mx-0 md:mx-8 relative order-3 md:order-2 mt-1 md:mt-0">
           <input
             ref={searchInputRef}
@@ -388,7 +416,6 @@ export default function HomePage() {
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
-          {/* 🔽 Dropdown แสดงผลลัพธ์ */}
           {searchQuery && isSearchFocused && (
             <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[50] max-h-[50vh] overflow-y-auto">
               {filteredProducts.length > 0 ? (
@@ -671,7 +698,14 @@ export default function HomePage() {
 
                     <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล..." className="w-full p-2.5 md:p-3 border border-gray-300 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 bg-gray-50" />
                     
+                    {/* 🌟 เปิดระบบแผนที่แบบเลื่อนปักหมุดพร้อมฟังก์ชันค้นหาพิกัด */}
                     <div className="flex flex-col gap-2 pt-1">
+                      <div className="flex gap-2">
+                        <button type="button" onClick={handleSearchAddress} className="flex-1 p-2.5 rounded-xl border bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 text-xs md:text-sm font-bold transition flex items-center justify-center gap-1">
+                          🔍 ค้นหาพิกัดจากที่อยู่
+                        </button>
+                      </div>
+
                       {!showMap ? (
                         <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                           <svg className="w-4 h-4 md:w-5 md:h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -681,7 +715,7 @@ export default function HomePage() {
                         <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[350px] animate-in fade-in zoom-in duration-300">
                           <div className="bg-[#0a4a2f] text-white text-xs md:text-sm text-center py-2 font-bold flex justify-between items-center px-4">
                             <span>📍 ใช้นิ้วเลื่อนแผนที่ให้ตรงกับบ้านคุณ</span>
-                            <button onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
+                            <button type="button" onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
                           </div>
                           
                           <div className="relative flex-1 w-full bg-gray-100">
@@ -691,12 +725,12 @@ export default function HomePage() {
                               <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                             </div>
 
-                            <button onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
+                            <button type="button" onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
                             </button>
                           </div>
 
-                          <button onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                          <button type="button" onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
                              ✅ ยืนยันพิกัดปักหมุดตรงนี้
                           </button>
                         </div>
@@ -711,12 +745,12 @@ export default function HomePage() {
                     </h3>
 
                     <div className="grid grid-cols-2 gap-2 md:gap-3">
-                      <button onClick={() => setPaymentMethod("qr")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-600 text-[#0a4a2f] ring-2 ring-green-600/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                      <button type="button" onClick={() => setPaymentMethod("qr")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "qr" ? "bg-green-50 border-green-600 text-[#0a4a2f] ring-2 ring-green-600/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                         <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                         <span className="text-[10px] md:text-xs font-bold">โอนเงิน / QR Code</span>
                       </button>
 
-                      <button onClick={() => setPaymentMethod("cod")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-800 ring-2 ring-orange-500/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                      <button type="button" onClick={() => setPaymentMethod("cod")} className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl border flex flex-col items-center gap-1.5 transition ${paymentMethod === "cod" ? "bg-orange-50 border-orange-500 text-orange-800 ring-2 ring-orange-500/30" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                         <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                         <span className="text-[10px] md:text-xs font-bold">เก็บเงินปลายทาง</span>
                       </button>
@@ -745,10 +779,10 @@ export default function HomePage() {
                   )}
 
                   <div className="space-y-2 pt-2">
-                    <button onClick={handleConfirmOrder} className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-sm md:text-lg transition shadow-md flex justify-center items-center gap-2">
+                    <button type="button" onClick={handleConfirmOrder} className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-sm md:text-lg transition shadow-md flex justify-center items-center gap-2">
                       {paymentMethod === "qr" ? "ยืนยันการโอนเงิน / แจ้งชำระเงิน" : "ยืนยันการสั่งซื้อปลายทาง"}
                     </button>
-                    <button onClick={() => setShowPayment(false)} className="w-full text-center text-[10px] md:text-xs text-gray-500 hover:text-gray-800 py-2 block">
+                    <button type="button" onClick={() => setShowPayment(false)} className="w-full text-center text-[10px] md:text-xs text-gray-500 hover:text-gray-800 py-2 block">
                       ← ย้อนกลับไปแก้ไขตะกร้าสินค้า
                     </button>
                   </div>
