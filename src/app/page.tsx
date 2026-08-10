@@ -30,6 +30,9 @@ export default function HomePage() {
   const [phone, setPhone] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qr");
+  
+  // 🌟 (ใหม่) สถานะเก็บลิงก์ Google Maps
+  const [mapLink, setMapLink] = useState("");
 
   // โหลดข้อมูลผู้ใช้
   useEffect(() => {
@@ -108,7 +111,6 @@ export default function HomePage() {
     }
   ];
 
-  // กรองสินค้าตามช่องค้นหา
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -117,6 +119,28 @@ export default function HomePage() {
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => { setToastMessage(""); }, 2000);
+  };
+
+  // 🌟 (ใหม่) ฟังก์ชันสำหรับดึงพิกัด GPS ของลูกค้า
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      showToast("⏳ กำลังหาพิกัดของคุณ...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          // แปลงพิกัดเป็นลิงก์ Google Maps
+          const link = `https://maps.google.com/?q=${latitude},${longitude}`;
+          setMapLink(link);
+          showToast("📍 ปักหมุดสำเร็จ!");
+        },
+        (error) => {
+          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
+        },
+        { enableHighAccuracy: true } // ขอพิกัดแบบแม่นยำสูง
+      );
+    } else {
+      alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
+    }
   };
 
   const addToCartOnly = (productId: number) => {
@@ -164,13 +188,18 @@ export default function HomePage() {
       return;
     }
 
-    // ลิงก์ Google Sheets ของคุณ
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
 
     showToast("กำลังส่งคำสั่งซื้อของคุณ...");
 
+    // 🌟 เอาลิงก์แผนที่มารวมไว้ในที่อยู่ (ถ้าลูกค้ากดปักหมุด)
+    let finalAddress = addressDetail;
+    if (mapLink) {
+      finalAddress += `\n📍 พิกัด GPS (Google Maps): ${mapLink}`;
+    }
+
     const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
-    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${addressDetail}\n\nรายการสินค้า:\n${orderListText}`;
+    const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${finalAddress}\n\nรายการสินค้า:\n${orderListText}`;
     const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
@@ -183,6 +212,7 @@ export default function HomePage() {
 
       if (dbError) throw dbError;
 
+      // ส่งข้อมูลไปที่ Google Sheets (พร้อมลิงก์ Google Maps)
       await fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -190,7 +220,7 @@ export default function HomePage() {
         body: JSON.stringify({
           customerName: fullName,
           phone: phone,
-          address: addressDetail,
+          address: finalAddress, // ใช้ที่อยู่ที่มีลิงก์แนบไปด้วย
           orderItems: orderListText,
           totalPrice: grandTotal,
           paymentMethod: paymentTypeText
@@ -204,6 +234,7 @@ export default function HomePage() {
       }
       
       setCart({});
+      setMapLink(""); // ล้างลิงก์แผนที่
       setIsCartOpen(false);
       setShowPayment(false);
 
@@ -344,7 +375,7 @@ export default function HomePage() {
               <div key={item.id} className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
                   
-                  {/* ✅ ปรับสัดส่วนรูปภาพตรงนี้ ให้บนมือถือเป็นแนวนอน (aspect-video) และบนคอมเป็นจัตุรัส */}
+                  {/* รูปภาพปรับเป็นแนวนอนบนมือถือ */}
                   <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -594,6 +625,20 @@ export default function HomePage() {
                     {user && (
                       <p className="text-[10px] md:text-xs text-gray-500 text-right">💡 ดึงข้อมูลที่อยู่มาจากบัญชีของคุณอัตโนมัติ</p>
                     )}
+                    
+                    {/* 🌟 ปุ่มปักหมุด GPS ที่ขอเพิ่มครับ */}
+                    <div className="flex flex-col gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleGetLocation}
+                        className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        {mapLink ? "📍 ปักหมุดสำเร็จ (คลิกเพื่อทำใหม่)" : "📍 กดเพื่อปักหมุดตำแหน่งปัจจุบัน"}
+                      </button>
+                      {mapLink && <p className="text-[9px] md:text-[10px] text-blue-600 text-center truncate">พิกัด: {mapLink}</p>}
+                    </div>
+
                   </div>
 
                   <div className="space-y-3">
