@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -15,8 +15,13 @@ export default function AccountPage() {
   const [addressDetail, setAddressDetail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
   const [orders, setOrders] = useState<any[]>([]);
+
+  // 🌟 สถานะระบบแผนที่แบบเลื่อนปักหมุด
+  const [mapLink, setMapLink] = useState("");
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showMap, setShowMap] = useState(false); 
+  const mapInstanceRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchUserAndOrders = async () => {
@@ -25,13 +30,18 @@ export default function AccountPage() {
         window.location.href = "/login"; 
       } else {
         setUser(session.user);
+        
+        // ดึงข้อมูลที่อยู่และพิกัดที่เคยบันทึกไว้มาแสดง
         const meta = session.user.user_metadata;
         if (meta) {
           setFullName(meta.fullName || "");
           setPhone(meta.phone || "");
           setAddressDetail(meta.addressDetail || "");
+          setMapLink(meta.mapLink || "");
+          setUserLocation(meta.userLocation || null);
         }
 
+        // ดึงประวัติการสั่งซื้อ
         const { data: orderData } = await supabase
           .from('orders')
           .select('*')
@@ -47,58 +57,127 @@ export default function AccountPage() {
     fetchUserAndOrders();
   }, []);
 
+  // --- โหลดสคริปต์แผนที่ OpenStreetMap ---
+  useEffect(() => {
+    if (showMap) {
+      const initMap = () => {
+        const L = (window as any).L;
+        if (!L) return;
+
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+
+        const lat = userLocation?.lat || 19.910480;
+        const lng = userLocation?.lng || 99.840576;
+
+        const map = L.map('account-map', { zoomControl: false }).setView([lat, lng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+        map.on('moveend', () => {
+          const center = map.getCenter();
+          setUserLocation({ lat: center.lat, lng: center.lng });
+          setMapLink(`https://maps.google.com/?q=${center.lat},${center.lng}`);
+        });
+
+        mapInstanceRef.current = map;
+      };
+
+      if (!(window as any).L) {
+        if (!document.getElementById('leaflet-css')) {
+          const link = document.createElement('link');
+          link.id = 'leaflet-css';
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+        if (!document.getElementById('leaflet-js')) {
+          const script = document.createElement('script');
+          script.id = 'leaflet-js';
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.onload = initMap;
+          document.head.appendChild(script);
+        }
+      } else {
+        initMap();
+      }
+
+      return () => {
+         if (mapInstanceRef.current) {
+             mapInstanceRef.current.remove();
+             mapInstanceRef.current = null;
+         }
+      };
+    }
+  }, [showMap, userLocation]);
+
+  // ดึงตำแหน่งปัจจุบัน
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setMapLink(`https://maps.google.com/?q=${latitude},${longitude}`);
+
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([latitude, longitude], 17, { animate: true, duration: 1.5 });
+          }
+          setShowMap(true); 
+        },
+        (error) => {
+          if (error.code === error.TIMEOUT) {
+            alert("⏳ ระบบค้นหาตำแหน่งนานเกินไป แนะนำให้ใช้เมาส์เลื่อนแผนที่ปักหมุดเองได้เลยครับ!");
+          } else {
+            alert("❌ ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS/Location ในมือถือ แล้วกดยอมรับสิทธิ์ครับ");
+          }
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } else {
+      alert("เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งครับ");
+    }
+  };
+
+  // 🌟 บันทึกข้อมูลที่อยู่ และพิกัดแผนที่ลงฐานข้อมูล
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    
     const { error } = await supabase.auth.updateUser({
-      data: { fullName, phone, addressDetail }
+      data: { fullName, phone, addressDetail, mapLink, userLocation } // บันทึกพิกัดด้วย
     });
+
     if (error) {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
     } else {
-      alert("✅ บันทึกข้อมูลที่อยู่สำเร็จ!");
+      alert("✅ บันทึกข้อมูลที่อยู่และพิกัดสำเร็จ! เวลาสั่งซื้อระบบจะดึงไปใช้อัตโนมัติครับ");
     }
     setSaving(false);
   };
 
-// --- ฟังก์ชันยกเลิกคำสั่งซื้อ ---
+  // 🌟 (โบนัส) ฟังก์ชันยกเลิกคำสั่งซื้อ
   const handleCancelOrder = async (orderId: number) => {
-    const confirmCancel = window.confirm("คุณแน่ใจหรือไม่ที่จะยกเลิกคำสั่งซื้อนี้?");
+    const confirmCancel = window.confirm("คุณต้องการยกเลิกคำสั่งซื้อนี้ใช่หรือไม่?");
     if (!confirmCancel) return;
 
-    // 🔴 ใส่ URL ของ Google Apps Script ตรงนี้ด้วยครับ (URL เดียวกับหน้าสั่งซื้อเลย)
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzZbB7Go7N6jg_8n1TEqzCOEuXYzFOkbSLUSEqfXu02XNSr6kx_PAuhQolZqMog6RzZ/exec";
-
-    // 1. อัปเดตสถานะใน Supabase
     const { error } = await supabase
       .from('orders')
       .update({ status: 'ยกเลิกแล้ว' })
       .eq('id', orderId);
 
     if (error) {
-      alert("เกิดข้อผิดพลาดในการยกเลิก: " + error.message);
+      alert("ไม่สามารถยกเลิกคำสั่งซื้อได้: " + error.message);
     } else {
-      
-      // 2. แอบส่งคำสั่งไปเปลี่ยนสถานะใน Google Sheets ให้เป็น "ยกเลิกแล้ว"
-      try {
-        await fetch(scriptUrl, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "cancel",     // บอกชีตว่านี่คือการยกเลิก
-            orderId: orderId      // ส่งรหัสออเดอร์ไปให้ชีตค้นหาบรรทัดที่ถูกต้อง
-          }),
-        });
-      } catch (e) {
-        console.error(e);
-      }
-
-      alert("✅ ยกเลิกคำสั่งซื้อสำเร็จ");
-      // อัปเดตหน้าจอทันที
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: 'ยกเลิกแล้ว' } : order
-      ));
+      alert("✅ ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
+      // อัปเดตสถานะในหน้าจอทันทีโดยไม่ต้องรีเฟรชหน้า
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ยกเลิกแล้ว' } : o));
     }
   };
 
@@ -111,7 +190,8 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans pb-20">
-      <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40">
+      
+      <nav className="flex items-center justify-between px-6 py-4 bg-white border-b border-green-100 sticky top-0 z-40 shadow-sm">
         <Link href="/" className="flex items-center gap-3 font-bold text-xl text-[#0a4a2f] hover:opacity-80 transition">
           <span className="text-2xl">←</span> กลับหน้าหลัก
         </Link>
@@ -133,7 +213,7 @@ export default function AccountPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
           
-          {/* ฝั่งซ้าย: ฟอร์มที่อยู่ */}
+          {/* ฝั่งซ้าย: ฟอร์มที่อยู่ และ แผนที่ปักหมุด */}
           <div className="lg:col-span-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-200 h-fit">
             <h2 className="text-lg font-bold text-[#0a4a2f] mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -150,9 +230,43 @@ export default function AccountPage() {
               </div>
               <div>
                 <label className="text-sm font-bold text-gray-700">ที่อยู่จัดส่งแบบละเอียด</label>
-                <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={3} placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์" className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" />
+                <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={3} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์" className="w-full mt-1 p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" />
               </div>
-              <button type="submit" disabled={saving} className="w-full bg-[#0a4a2f] text-[#f3c623] py-3 rounded-xl font-bold hover:bg-[#073622] transition shadow-md">
+
+              {/* 🌟 ระบบปักหมุดในหน้าบัญชี */}
+              <div className="flex flex-col gap-2 pt-1">
+                {!showMap ? (
+                  <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-bold transition ${mapLink ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    {mapLink ? "📍 แก้ไขพิกัดปักหมุด" : "📍 เปิดแผนที่เพื่อปักหมุด"}
+                  </button>
+                ) : (
+                  <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[300px] animate-in fade-in zoom-in duration-300">
+                    <div className="bg-[#0a4a2f] text-white text-xs text-center py-2 font-bold flex justify-between items-center px-4">
+                      <span>📍 เลื่อนแผนที่ให้ตรงบ้าน</span>
+                      <button type="button" onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
+                    </div>
+                    
+                    <div className="relative flex-1 w-full bg-gray-100">
+                      <div id="account-map" className="absolute inset-0 z-0"></div>
+                      
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[10] pointer-events-none drop-shadow-xl pb-2">
+                        <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      </div>
+
+                      <button type="button" onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[10] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
+                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+                      </button>
+                    </div>
+
+                    <button type="button" onClick={() => setShowMap(false)} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-2.5 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                       ✅ ยืนยันพิกัดปักหมุด
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" disabled={saving} className="w-full bg-[#0a4a2f] text-[#f3c623] py-3.5 rounded-xl font-bold hover:bg-[#073622] transition shadow-md mt-2">
                 {saving ? "กำลังบันทึก..." : "บันทึกที่อยู่"}
               </button>
             </form>
@@ -177,19 +291,16 @@ export default function AccountPage() {
               orders.map((order, index) => (
                 <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   
-                  {/* หัวบิล */}
                   <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center gap-2 font-bold text-gray-800">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                       วิสาหกิจบ้านป่าตึงงาม
                     </div>
-                    {/* เปลี่ยนสีตัวหนังสือตามสถานะ */}
                     <div className={`font-semibold text-sm ${order.status === 'ยกเลิกแล้ว' ? 'text-red-500' : 'text-orange-500'}`}>
                       {order.status}
                     </div>
                   </div>
 
-                  {/* รายการสินค้า */}
                   <div className="p-4 space-y-4">
                     {order.items.map((item: any, i: number) => (
                       <div key={i} className="flex gap-4">
@@ -206,24 +317,20 @@ export default function AccountPage() {
                     ))}
                   </div>
 
-                  {/* สรุปยอด และปุ่มกด */}
                   <div className="p-4 border-t border-gray-100 flex flex-col items-end gap-3 bg-gray-50/30">
                     <div className="text-gray-800 font-medium">
                       ยอดรวม: <span className="text-xl font-bold text-[#ee4d2d]">฿{order.total_price}</span>
                     </div>
-                    
-                    <div className="flex gap-3 mt-1">
-                      {/* ปุ่มยกเลิก จะโชว์เฉพาะออเดอร์ที่ยัง รอดำเนินการ */}
-                      {order.status === 'รอดำเนินการ' && (
+                    <div className="flex gap-2 sm:gap-3 mt-1 w-full sm:w-auto justify-end">
+                      {order.status !== 'ยกเลิกแล้ว' && (
                         <button 
                           onClick={() => handleCancelOrder(order.id)}
-                          className="px-6 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-[4px] hover:bg-gray-50 hover:text-red-500 transition shadow-sm text-sm"
+                          className="px-4 py-2 bg-white text-gray-600 border border-gray-300 font-bold rounded-[4px] hover:bg-gray-50 transition shadow-sm text-sm"
                         >
                           ยกเลิกคำสั่งซื้อ
                         </button>
                       )}
-
-                      <Link href="/" className="px-6 py-2 bg-[#ee4d2d] text-white font-bold rounded-[4px] hover:bg-[#d73f22] transition shadow-sm text-sm">
+                      <Link href="/" className="px-6 py-2 bg-[#ee4d2d] text-white font-bold rounded-[4px] hover:bg-[#d73f22] transition shadow-sm text-sm text-center">
                         ซื้ออีกครั้ง
                       </Link>
                     </div>
@@ -236,33 +343,6 @@ export default function AccountPage() {
 
         </div>
       </div>
-      {/* --- ส่วน Footer (เครดิตล่างสุด) --- */}
-     <footer className="bg-[#0a4a2f] border-t-4 border-[#f3c623] text-white py-10 mt-16 w-full relative z-40">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-3">
-          
-          <div className="space-y-1">
-           <p className="font-bold flex items-center justify-center gap-1 text-lg text-[#f3c623]">  
-              วิสาหกิจบ้านป่าตึงงาม หมู่ 18
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
-            </p>
-            <p className="text-sm text-gray-300">ตำบลป่า อำเภอแ่ปลื้ม</p>
-            <p className="text-sm text-gray-300">จังหวัดเชียงราย 57100</p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 font-extrabold text-xl pt-3 pb-1">
-            <svg className="w-5 h-5 text-[#f3c623]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-            Tel : 063-405-2812
-          </div>
-
-          <div className="pt-2 flex justify-center">
-            {/* สามารถใส่ลิงก์ Facebook ร้าน ตรง href="#" แทนเครื่องหมาย # ได้เลยครับ */}
-            <a href="https://www.facebook.com/pongpichit.tarboonsom" target="_blank" rel="noreferrer" className="bg-[#f3c623] text-[#0a4a2f] w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition shadow-md">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd"></path></svg>
-            </a>
-          </div>
-
-        </div>
-      </footer>
     </div>
   );
 }
