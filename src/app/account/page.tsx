@@ -106,7 +106,7 @@ export default function AccountPage() {
       setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
     } else {
       // ยิงข้อมูลไปแก้ใน Excel
-      const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
+      const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
       fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
