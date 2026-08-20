@@ -17,7 +17,6 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // 🌟 ระบบสิทธิ์แอดมิน
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false); 
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -30,7 +29,6 @@ export default function AccountPage() {
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
 
-  // 💥 สถานะสำหรับแอนิเมชันเตะแอดมินสไตล์ Pixel
   const [kickTarget, setKickTarget] = useState<{id: number, email: string} | null>(null);
   const [isKicking, setIsKicking] = useState(false);
 
@@ -38,6 +36,9 @@ export default function AccountPage() {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null);
+
+  // 🌟 ลิงก์ Excel ดึงมาจากรูปที่คุณแคปมาครับ!
+  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97_GuoNKsRAgkqUaN5PLkXeTDVvyAY/edit#gid=0";
 
   useEffect(() => {
     const fetchUserAndOrders = async () => {
@@ -95,13 +96,27 @@ export default function AccountPage() {
     if (adminsData) setAdminList(adminsData);
   };
 
+  // 🌟 อัปเกรด: เปลี่ยนสถานะแล้วส่งคำสั่งไปเปลี่ยนใน Google Sheets ด้วย!
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    setCustomAlert({ title: "กำลังอัปเดต...", message: "ระบบกำลังซิงค์สถานะใหม่ไปยัง Excel", type: "loading" });
+
     const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    
     if (error) {
       setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
     } else {
-      showToast("✅ อัปเดตสถานะสำเร็จ");
+      // ยิงข้อมูลไปแก้ใน Excel
+      const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
+      fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "update_status", orderId: orderId, status: newStatus })
+      }).catch(console.error);
+
       setAllOrders(allOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      setCustomAlert({ title: "อัปเดตสำเร็จ!", message: "สถานะถูกเปลี่ยนในระบบและ Excel เรียบร้อยแล้ว", type: "success" });
+      setTimeout(() => setCustomAlert(null), 1500);
     }
   };
 
@@ -124,7 +139,6 @@ export default function AccountPage() {
     }
   };
 
-  // 💥 เตรียมเตะแอดมิน (ล็อกสิทธิ์เฉพาะ Super Admin เท่านั้น)
   const prepareRemoveAdmin = (id: number, emailOrPhone: string) => {
     if (!isSuperAdmin) {
       setCustomAlert({ title: "ไม่มีสิทธิ์!", message: "เฉพาะแอดมินสูงสุด 👑 เท่านั้นที่สามารถเตะคนอื่นได้ครับ", type: "error" });
@@ -137,7 +151,6 @@ export default function AccountPage() {
     setKickTarget({ id, email: emailOrPhone });
   };
 
-  // 💥 ฟังก์ชันยืนยันการเตะ
   const confirmKickAdmin = async () => {
     if (!kickTarget || !isSuperAdmin) return;
     setIsKicking(true); 
@@ -345,6 +358,14 @@ export default function AccountPage() {
     window.location.href = "/";
   };
 
+  // Helper ฟังก์ชันจัดฟอร์แมตวันที่ให้สวยงาม
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH', { 
+      year: 'numeric', month: 'short', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans font-bold text-gray-500">กำลังตรวจสอบข้อมูล...</div>;
 
   return (
@@ -456,27 +477,52 @@ export default function AccountPage() {
                 </div>
               ) : (
                 allOrders.map((order) => (
-                  <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex-1">
-                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold text-xs">ID: {order.id}</span>
-                      <div className="space-y-1 mt-3">
-                        {order.items.map((item: any, i: number) => (
-                          <div key={i} className="text-sm font-medium text-gray-800 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>{item.name} <span className="text-orange-600 font-extrabold ml-auto">x{item.qty}</span>
-                          </div>
-                        ))}
+                  <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+                    
+                    {/* 🌟 Header กล่องออเดอร์: ID, วันที่, และปุ่มลิงก์ไป Excel */}
+                    <div className="bg-gray-50 border-b border-gray-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-[#0a4a2f] text-[#f3c623] px-3 py-1 rounded-lg font-extrabold text-sm shadow-sm">ID: {order.id}</span>
+                        <span className="text-sm font-bold text-gray-600">📅 {formatDate(order.created_at)}</span>
                       </div>
-                      <div className="mt-3 font-bold text-gray-900">ยอดสุทธิ: <span className="text-red-500">฿{order.total_price}</span></div>
+                      
+                      <button
+                        onClick={() => {
+                          // ก๊อปปี้ ID ไว้ให้แอดมินกด Ctrl+F หาใน Excel ได้เลย
+                          navigator.clipboard.writeText(order.id.toString());
+                          showToast(`📋 คัดลอกรหัส [ ${order.id} ] แล้ว! กด Ctrl+F ใน Excel เพื่อค้นหาได้เลย`);
+                          // เปิดลิงก์ Excel ไปแท็บใหม่
+                          window.open(GOOGLE_SHEET_URL, "_blank");
+                        }}
+                        className="bg-green-100 text-green-700 hover:bg-green-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-green-300 shadow-sm w-full sm:w-auto justify-center"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        📊 ดูข้อมูลลูกค้าใน Excel
+                      </button>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shrink-0 w-full md:w-auto">
-                      <label className="text-xs text-gray-500 font-bold block mb-1">สถานะปัจจุบัน:</label>
-                      <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300 outline-none cursor-pointer">
-                        <option value="รอดำเนินการ">🟠 รอดำเนินการ</option>
-                        <option value="กำลังจัดส่ง">🔵 กำลังจัดส่ง</option>
-                        <option value="จัดส่งสำเร็จ">🟢 จัดส่งสำเร็จ</option>
-                        <option value="ยกเลิกแล้ว">🔴 ยกเลิกแล้ว</option>
-                      </select>
+
+                    <div className="p-4 flex flex-col md:flex-row justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="space-y-1">
+                          {order.items.map((item: any, i: number) => (
+                            <div key={i} className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>{item.name} <span className="text-orange-600 font-extrabold ml-auto">x{item.qty}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 font-bold text-gray-900">ยอดสุทธิ: <span className="text-red-500">฿{order.total_price}</span></div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shrink-0 w-full md:w-auto h-fit">
+                        <label className="text-xs text-gray-500 font-bold block mb-1">สถานะปัจจุบัน:</label>
+                        <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300 outline-none cursor-pointer">
+                          <option value="รอดำเนินการ">🟠 รอดำเนินการ</option>
+                          <option value="กำลังจัดส่ง">🔵 กำลังจัดส่ง</option>
+                          <option value="จัดส่งสำเร็จ">🟢 จัดส่งสำเร็จ</option>
+                          <option value="ยกเลิกแล้ว">🔴 ยกเลิกแล้ว</option>
+                        </select>
+                      </div>
                     </div>
+
                   </div>
                 ))
               )}
@@ -494,7 +540,7 @@ export default function AccountPage() {
               </div>
               <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">รายชื่อผู้ดูแลระบบ</h3>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                   {adminList.map((admin) => {
                     const isMe = admin.email === (user?.email || user?.phone);
                     return (
@@ -506,14 +552,12 @@ export default function AccountPage() {
                         </div>
                         
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          {/* 👑 ปุ่มโอนสิทธิ์: ปรากฏเฉพาะถ้าเราเป็น Super Admin และคนนี้ไม่ใช่ Super Admin */}
                           {isSuperAdmin && !admin.is_super && (
                             <button onClick={() => handleTransferSuperAdmin(admin.id, admin.email)} className="text-[10px] bg-white text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-lg font-bold transition shadow-sm border border-purple-200 whitespace-nowrap">
                               โอนสิทธิ์ 👑
                             </button>
                           )}
                           
-                          {/* 💥 ปุ่มลบ: ปรากฏเฉพาะเมื่อผู้ใช้ปัจจุบันเป็น Super Admin เท่านั้น! 💥 */}
                           {isSuperAdmin && !admin.is_super && (
                             <button onClick={() => prepareRemoveAdmin(admin.id, admin.email)} className="text-red-500 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-bold text-xs shadow-sm whitespace-nowrap">
                               ลบสิทธิ์
