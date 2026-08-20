@@ -124,8 +124,12 @@ export default function AccountPage() {
     }
   };
 
-  // 💥 เตรียมเตะแอดมิน (เปิด Modal)
+  // 💥 เตรียมเตะแอดมิน (ล็อกสิทธิ์เฉพาะ Super Admin เท่านั้น)
   const prepareRemoveAdmin = (id: number, emailOrPhone: string) => {
+    if (!isSuperAdmin) {
+      setCustomAlert({ title: "ไม่มีสิทธิ์!", message: "เฉพาะแอดมินสูงสุด 👑 เท่านั้นที่สามารถเตะคนอื่นได้ครับ", type: "error" });
+      return;
+    }
     if (emailOrPhone === (user?.email || user?.phone)) {
       setCustomAlert({ title: "เตะตัวเองไม่ได้!", message: "คุณไม่สามารถเตะตัวเองออกจากระบบได้ครับ!", type: "error" });
       return;
@@ -133,12 +137,11 @@ export default function AccountPage() {
     setKickTarget({ id, email: emailOrPhone });
   };
 
-  // 💥 ฟังก์ชันยืนยันการเตะ (เล่นแอนิเมชัน)
+  // 💥 ฟังก์ชันยืนยันการเตะ
   const confirmKickAdmin = async () => {
-    if (!kickTarget) return;
-    setIsKicking(true); // เริ่มเล่นแอนิเมชัน
+    if (!kickTarget || !isSuperAdmin) return;
+    setIsKicking(true); 
 
-    // รอแอนิเมชันเล่นจบ 1.5 วินาที แล้วค่อยลบจากฐานข้อมูล
     setTimeout(async () => {
       const { error } = await supabase.from("admins").delete().eq("id", kickTarget.id);
       setIsKicking(false);
@@ -154,6 +157,7 @@ export default function AccountPage() {
   };
 
   const handleTransferSuperAdmin = async (targetId: number, targetEmail: string) => {
+    if (!isSuperAdmin) return;
     if (!window.confirm(`⚠️ คำเตือนระดับสูงสุด!\n\nคุณต้องการโอนตำแหน่ง "👑 แอดมินสูงสุด" ให้กับ ${targetEmail} ใช่หรือไม่?\n\nเมื่อโอนแล้ว คุณจะกลายเป็นแอดมินธรรมดา และไม่สามารถดึงสิทธิ์คืนได้เองอีกต่อไป!`)) return;
 
     setCustomAlert({ title: "กำลังโอนสิทธิ์...", message: "โปรดรอสักครู่", type: "loading" });
@@ -378,13 +382,9 @@ export default function AccountPage() {
               <span className="text-white bg-red-700 px-3 py-1 inline-block mt-3 font-bold border-2 border-red-900">{kickTarget.email}</span>
             </p>
 
-            {/* เวทีจำลองการเตะ */}
             <div className="relative w-full h-32 bg-gray-800 border-2 border-gray-700 mb-8 flex items-center justify-center overflow-hidden">
-               {/* เอฟเฟกต์ระเบิด */}
                <div className="text-6xl absolute z-10" style={{ animation: isKicking ? 'powEffect 1.5s forwards' : 'none', opacity: 0, left: '50%' }}>💥</div>
-               {/* รองเท้า */}
                <div className="text-6xl absolute z-20" style={{ animation: isKicking ? 'windup 1.5s forwards' : 'none', left: '30%', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>👞</div>
-               {/* คนโดนเตะ */}
                <div className="text-6xl absolute z-10" style={{ animation: isKicking ? 'flyaway 1.5s forwards' : 'none', left: '50%', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>🧍</div>
             </div>
 
@@ -506,14 +506,15 @@ export default function AccountPage() {
                         </div>
                         
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          {/* 👑 ปุ่มโอนสิทธิ์: ปรากฏเฉพาะถ้าเราเป็น Super Admin และคนนี้ไม่ใช่ Super Admin */}
                           {isSuperAdmin && !admin.is_super && (
                             <button onClick={() => handleTransferSuperAdmin(admin.id, admin.email)} className="text-[10px] bg-white text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-lg font-bold transition shadow-sm border border-purple-200 whitespace-nowrap">
                               โอนสิทธิ์ 👑
                             </button>
                           )}
                           
-                          {/* 💥 กดปุ่มนี้แล้วจะเด้งหน้าต่าง Pixel เตะแอดมิน 💥 */}
-                          {!admin.is_super && (
+                          {/* 💥 ปุ่มลบ: ปรากฏเฉพาะเมื่อผู้ใช้ปัจจุบันเป็น Super Admin เท่านั้น! 💥 */}
+                          {isSuperAdmin && !admin.is_super && (
                             <button onClick={() => prepareRemoveAdmin(admin.id, admin.email)} className="text-red-500 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-bold text-xs shadow-sm whitespace-nowrap">
                               ลบสิทธิ์
                             </button>
