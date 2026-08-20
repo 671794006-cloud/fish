@@ -17,7 +17,7 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // 🌟 (ใหม่) ตรวจสอบสิทธิ์ว่าเป็นแอดมินหรือไม่
+  // 🌟 ตรวจสอบสิทธิ์ว่าเป็นแอดมินหรือไม่
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [allOrders, setAllOrders] = useState<any[]>([]);
@@ -60,7 +60,7 @@ export default function AccountPage() {
           .order('created_at', { ascending: false });
         if (orderData) setOrders(orderData);
 
-        // 2. เช็กว่าเป็นแอดมินไหม
+        // 2. เช็กว่าเป็นแอดมินไหม (หัวใจสำคัญอยู่ตรงนี้!)
         const { data: adminData } = await supabase
           .from("admins")
           .select("*")
@@ -68,7 +68,7 @@ export default function AccountPage() {
           .single();
 
         if (adminData) {
-          setIsAdmin(true); // อนุญาตให้มองเห็นปุ่มแอดมิน
+          setIsAdmin(true); 
           fetchAllAdminData();
         }
       }
@@ -346,30 +346,36 @@ export default function AccountPage() {
 
           {adminTab === "orders" && (
             <div className="space-y-4">
-              {allOrders.map((order) => (
-                <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-col md:flex-row justify-between gap-4">
-                  <div className="flex-1">
-                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold text-xs">ID: {order.id}</span>
-                    <div className="space-y-1 mt-3">
-                      {order.items.map((item: any, i: number) => (
-                        <div key={i} className="text-sm font-medium text-gray-800 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>{item.name} <span className="text-orange-600 font-extrabold ml-auto">x{item.qty}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 font-bold text-gray-900">ยอดสุทธิ: <span className="text-red-500">฿{order.total_price}</span></div>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shrink-0 w-full md:w-auto">
-                    <label className="text-xs text-gray-500 font-bold block mb-1">สถานะปัจจุบัน:</label>
-                    <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300">
-                      <option value="รอดำเนินการ">🟠 รอดำเนินการ</option>
-                      <option value="กำลังจัดส่ง">🔵 กำลังจัดส่ง</option>
-                      <option value="จัดส่งสำเร็จ">🟢 จัดส่งสำเร็จ</option>
-                      <option value="ยกเลิกแล้ว">🔴 ยกเลิกแล้ว</option>
-                    </select>
-                  </div>
+              {allOrders.length === 0 ? (
+                <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-300">
+                  <p className="text-gray-500 font-bold">ยังไม่มีออเดอร์เข้ามาในระบบครับ</p>
                 </div>
-              ))}
+              ) : (
+                allOrders.map((order) => (
+                  <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-col md:flex-row justify-between gap-4">
+                    <div className="flex-1">
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold text-xs">ID: {order.id}</span>
+                      <div className="space-y-1 mt-3">
+                        {order.items.map((item: any, i: number) => (
+                          <div key={i} className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>{item.name} <span className="text-orange-600 font-extrabold ml-auto">x{item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 font-bold text-gray-900">ยอดสุทธิ: <span className="text-red-500">฿{order.total_price}</span></div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shrink-0 w-full md:w-auto">
+                      <label className="text-xs text-gray-500 font-bold block mb-1">สถานะปัจจุบัน:</label>
+                      <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300">
+                        <option value="รอดำเนินการ">🟠 รอดำเนินการ</option>
+                        <option value="กำลังจัดส่ง">🔵 กำลังจัดส่ง</option>
+                        <option value="จัดส่งสำเร็จ">🟢 จัดส่งสำเร็จ</option>
+                        <option value="ยกเลิกแล้ว">🔴 ยกเลิกแล้ว</option>
+                      </select>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
