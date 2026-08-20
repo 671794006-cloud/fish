@@ -38,7 +38,7 @@ export default function AccountPage() {
   const mapInstanceRef = useRef<any>(null);
 
   // 🌟 ลิงก์ Excel ดึงมาจากรูปที่คุณแคปมาครับ!
-  const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
+  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLKxeTDVvyAY/edit?gid=0#gid=0";
 
   useEffect(() => {
     const fetchUserAndOrders = async () => {
