@@ -17,12 +17,14 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // 🌟 ตรวจสอบสิทธิ์ว่าเป็นแอดมินหรือไม่
+  // 🌟 ระบบสิทธิ์แอดมินของแท้!
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false); // 👑 เช็กว่าเป็นแอดมินสูงสุดไหม
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [adminList, setAdminList] = useState<any[]>([]);
-  const [newAdminAccount, setNewAdminAccount] = useState(""); // ใช้ได้ทั้งอีเมลและเบอร์โทร
+  const [newAdminAccount, setNewAdminAccount] = useState("");
   const [adminTab, setAdminTab] = useState<"orders" | "admins">("orders");
 
   const [toastMessage, setToastMessage] = useState(""); 
@@ -52,7 +54,7 @@ export default function AccountPage() {
         setUserLocation(meta.userLocation || null);
       }
 
-      // ดึงประวัติคำสั่งซื้อส่วนตัว
+      // ดึงประวัติคำสั่งซื้อ
       const { data: orderData } = await supabase
         .from('orders')
         .select('*')
@@ -60,34 +62,21 @@ export default function AccountPage() {
         .order('created_at', { ascending: false });
       if (orderData) setOrders(orderData);
 
-      // 🌟 โค้ดระดับ VIP: รองรับทั้งอีเมลและเบอร์โทรศัพท์
-      const vipAccounts = [
-        "banklce1210@gmail.com", 
-        "671794006@crru.ac.th"
-      ];
-      
-      let userIsAdmin = false;
-      
-      // ดึงอีเมล หรือ เบอร์โทร (+66...) ที่ล็อกอินเข้ามา
+      // 🌟 ดึงสิทธิ์แอดมินจากฐานข้อมูล 100% (ลบโค้ด VIP ฝังตัวทิ้งแล้ว!)
       const currentUserIdentifier = session.user.email || session.user.phone || "";
 
-      if (currentUserIdentifier && vipAccounts.includes(currentUserIdentifier)) {
-        userIsAdmin = true;
-      } else if (currentUserIdentifier) {
+      if (currentUserIdentifier) {
         const { data: adminData } = await supabase
           .from("admins")
           .select("*")
-          .eq("email", currentUserIdentifier) // ใช้คอลัมน์ email เก็บทั้งเมลและเบอร์โทร
+          .eq("email", currentUserIdentifier)
           .maybeSingle(); 
 
         if (adminData) {
-          userIsAdmin = true; 
+          setIsAdmin(true); 
+          setIsSuperAdmin(adminData.is_super); // ดึงยศแอดมินสูงสุดมา
+          fetchAllAdminData();
         }
-      }
-
-      if (userIsAdmin) {
-        setIsAdmin(true);
-        fetchAllAdminData();
       }
       
       setLoading(false);
@@ -100,7 +89,7 @@ export default function AccountPage() {
     const { data: ordersData } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
     if (ordersData) setAllOrders(ordersData);
 
-    const { data: adminsData } = await supabase.from("admins").select("*").order("created_at", { ascending: true });
+    const { data: adminsData } = await supabase.from("admins").select("*").order("is_super", { ascending: false }).order("created_at", { ascending: true });
     if (adminsData) setAdminList(adminsData);
   };
 
@@ -119,12 +108,11 @@ export default function AccountPage() {
     let accountToAdd = newAdminAccount.trim();
     if (!accountToAdd) return;
 
-    // ระบบฉลาด: ถ้าพิมพ์เบอร์มาเป็น 08x ให้แปลงเป็น +66 ให้อัตโนมัติ
     if (/^0[0-9]{9}$/.test(accountToAdd)) {
       accountToAdd = "+66" + accountToAdd.substring(1);
     }
 
-    const { error } = await supabase.from("admins").insert([{ email: accountToAdd }]);
+    const { error } = await supabase.from("admins").insert([{ email: accountToAdd, is_super: false }]); // แอดมินใหม่ที่เพิ่มจะเป็นแอดมินธรรมดาเสมอ
     if (error) {
       alert("ไม่สามารถเพิ่มแอดมินได้ (ข้อมูลนี้อาจมีอยู่แล้ว หรือพิมพ์ผิดครับ)");
     } else {
@@ -135,16 +123,38 @@ export default function AccountPage() {
   };
 
   const handleRemoveAdmin = async (id: number, emailOrPhone: string) => {
-    const currentUser = user?.email || user?.phone;
-    if (emailOrPhone === currentUser) {
+    if (emailOrPhone === (user?.email || user?.phone)) {
       alert("❌ คุณไม่สามารถลบตัวเองออกจากระบบได้ครับ!");
       return;
     }
     if (!window.confirm(`ยืนยันการลบสิทธิ์แอดมินของ\n${emailOrPhone} ?`)) return;
+    
     const { error } = await supabase.from("admins").delete().eq("id", id);
     if (!error) {
       showToast("🗑️ ลบแอดมินสำเร็จ");
       fetchAllAdminData();
+    }
+  };
+
+  // 👑 ฟังก์ชันโอนตำแหน่ง "แอดมินสูงสุด"
+  const handleTransferSuperAdmin = async (targetId: number, targetEmail: string) => {
+    if (!window.confirm(`⚠️ คำเตือนระดับสูงสุด!\n\nคุณต้องการโอนตำแหน่ง "👑 แอดมินสูงสุด" ให้กับ ${targetEmail} ใช่หรือไม่?\n\nเมื่อโอนแล้ว คุณจะกลายเป็นแอดมินธรรมดา และไม่สามารถดึงสิทธิ์คืนได้เองอีกต่อไป!`)) return;
+
+    setCustomAlert({ title: "กำลังโอนสิทธิ์...", message: "โปรดรอสักครู่", type: "loading" });
+
+    // 1. ถอดสิทธิ์แอดมินสูงสุดของตัวเอง
+    await supabase.from("admins").update({ is_super: false }).eq("email", user?.email || user?.phone);
+    
+    // 2. มอบสิทธิ์แอดมินสูงสุดให้คนใหม่
+    const { error } = await supabase.from("admins").update({ is_super: true }).eq("id", targetId);
+
+    if (error) {
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
+    } else {
+      setCustomAlert({ title: "โอนสิทธิ์สำเร็จ!", message: `แอดมินสูงสุดถูกเปลี่ยนเป็น ${targetEmail} เรียบร้อยแล้ว`, type: "success" });
+      setIsSuperAdmin(false); // ตัวเองหลุดจากการเป็น Super Admin ในหน้าจอทันที
+      fetchAllAdminData();
+      setTimeout(() => setCustomAlert(null), 2500);
     }
   };
 
@@ -357,11 +367,11 @@ export default function AccountPage() {
       {/* 🌟 หน้าจัดการหลังบ้านสำหรับ Admin เท่านั้น */}
       {isAdmin && showAdminPanel ? (
         <div className="max-w-5xl mx-auto px-4 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 p-4 rounded-t-3xl shadow-sm mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-yellow-50 border border-yellow-200 p-4 rounded-t-3xl shadow-sm mb-6 gap-4">
             <h2 className="font-bold text-yellow-800 text-lg flex items-center gap-2">
               <span className="bg-yellow-500 text-white px-2 py-0.5 rounded text-xs uppercase">Admin</span> ระบบจัดการร้านค้า
             </h2>
-            <button onClick={() => setShowAdminPanel(false)} className="text-sm font-bold bg-white text-gray-600 px-4 py-2 rounded-xl hover:bg-gray-100 border border-gray-200 transition shadow-sm">
+            <button onClick={() => setShowAdminPanel(false)} className="text-sm font-bold bg-white text-gray-600 px-4 py-2 rounded-xl hover:bg-gray-100 border border-gray-200 transition shadow-sm w-full sm:w-auto">
               กลับไปหน้าบัญชี
             </button>
           </div>
@@ -407,25 +417,42 @@ export default function AccountPage() {
           )}
 
           {adminTab === "admins" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm h-fit">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">เพิ่มแอดมินใหม่</h3>
                 <form onSubmit={handleAddAdmin} className="space-y-3">
                   <input type="text" required value={newAdminAccount} onChange={(e) => setNewAdminAccount(e.target.value)} placeholder="อีเมล หรือ เบอร์โทร (เช่น 0812345678)" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-600" />
-                  <button type="submit" className="w-full bg-[#0a4a2f] text-[#f3c623] font-bold py-3 rounded-xl hover:bg-[#073622] transition shadow-md">เพิ่มสิทธิ์</button>
+                  <button type="submit" className="w-full bg-[#0a4a2f] text-[#f3c623] font-bold py-3 rounded-xl hover:bg-[#073622] transition shadow-md">เพิ่มสิทธิ์แอดมินทั่วไป</button>
                 </form>
               </div>
               <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">รายชื่อผู้ดูแลระบบ</h3>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {adminList.map((admin) => {
                     const isMe = admin.email === (user?.email || user?.phone);
                     return (
-                      <div key={admin.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="font-semibold text-sm">
-                          {admin.email} {isMe && <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full ml-1">คุณ</span>}
-                        </span>
-                        <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 hover:bg-red-100 p-2 rounded transition">✕</button>
+                      <div key={admin.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-xl border border-gray-100 gap-3">
+                        <div className="font-semibold text-sm flex flex-wrap items-center gap-2">
+                          <span className="truncate max-w-[150px] sm:max-w-full">{admin.email}</span>
+                          {isMe && <span className="text-[10px] bg-green-200 text-green-800 px-2 py-0.5 rounded-full whitespace-nowrap">คุณ</span>}
+                          {admin.is_super && <span className="text-[10px] bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-bold whitespace-nowrap">👑 แอดมินสูงสุด</span>}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          {/* 👑 ปุ่มโอนสิทธิ์: โชว์เฉพาะถ้าเราเป็น SuperAdmin และคนนี้ไม่ใช่ SuperAdmin */}
+                          {isSuperAdmin && !admin.is_super && (
+                            <button onClick={() => handleTransferSuperAdmin(admin.id, admin.email)} className="text-[10px] bg-white text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-lg font-bold transition shadow-sm border border-purple-200 whitespace-nowrap">
+                              โอนสิทธิ์ 👑
+                            </button>
+                          )}
+                          
+                          {/* ❌ ปุ่มลบ: ลบแอดมินสูงสุดไม่ได้ */}
+                          {!admin.is_super && (
+                            <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-bold text-xs shadow-sm whitespace-nowrap">
+                              ลบสิทธิ์
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -440,11 +467,13 @@ export default function AccountPage() {
           <div className="bg-[#0a4a2f] text-white p-8 rounded-t-3xl shadow-md flex justify-between items-center">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white text-[#0a4a2f] rounded-full flex items-center justify-center text-3xl font-extrabold uppercase shadow-inner">
-                {/* ดึงตัวอักษรแรกของอีเมลหรือเบอร์โทรมาแสดง */}
                 {(user?.email || user?.phone || "U").charAt(0).toUpperCase()}
               </div>
               <div>
-                <h1 className="text-2xl font-bold">บัญชีของฉัน</h1>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  บัญชีของฉัน
+                  {isSuperAdmin && <span className="text-[10px] bg-purple-500 text-white px-2 py-1 rounded-full shadow-sm ml-1">👑 แอดมินสูงสุด</span>}
+                </h1>
                 <p className="text-green-200 text-sm mt-1">{user?.email || user?.phone}</p>
               </div>
             </div>
