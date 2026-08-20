@@ -17,6 +17,7 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
+  // 🌟 ระบบสิทธิ์แอดมิน
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false); 
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -29,16 +30,21 @@ export default function AccountPage() {
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
 
+  // 💥 สถานะสำหรับแอนิเมชันเตะแอดมิน
   const [kickTarget, setKickTarget] = useState<{id: number, email: string} | null>(null);
   const [isKicking, setIsKicking] = useState(false);
+
+  // 😭 สถานะสำหรับแอนิเมชันยกเลิกออเดอร์ (ร้องไห้งอแง)
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
+  const [isCancelingOrder, setIsCancelingOrder] = useState(false);
 
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null);
 
-  // 🌟 ลิงก์ Excel ดึงมาจากรูปที่คุณแคปมาครับ!
-  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLKxeTDVvyAY/edit?gid=0#gid=0";
+  // ลิงก์ไปไฟล์ Excel ของคุณ
+  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97_GuoNKsRAgkqUaN5PLkXeTDVvyAY/edit#gid=0";
 
   useEffect(() => {
     const fetchUserAndOrders = async () => {
@@ -96,7 +102,6 @@ export default function AccountPage() {
     if (adminsData) setAdminList(adminsData);
   };
 
-  // 🌟 อัปเกรด: เปลี่ยนสถานะแล้วส่งคำสั่งไปเปลี่ยนใน Google Sheets ด้วย!
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     setCustomAlert({ title: "กำลังอัปเดต...", message: "ระบบกำลังซิงค์สถานะใหม่ไปยัง Excel", type: "loading" });
 
@@ -105,7 +110,6 @@ export default function AccountPage() {
     if (error) {
       setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
     } else {
-      // ยิงข้อมูลไปแก้ใน Excel
       const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
       fetch(scriptUrl, {
         method: "POST",
@@ -188,7 +192,6 @@ export default function AccountPage() {
     }
   };
 
-  // --- โหลดสคริปต์แผนที่ OpenStreetMap ---
   useEffect(() => {
     if (showMap) {
       const initMap = () => {
@@ -329,28 +332,39 @@ export default function AccountPage() {
     setSaving(false);
   };
 
-  const handleCancelOrder = async (orderId: number) => {
-    const confirmCancel = window.confirm("คุณต้องการยกเลิกคำสั่งซื้อนี้ใช่หรือไม่?");
-    if (!confirmCancel) return;
+  // 😭 เตรียมยกเลิกออเดอร์ (เปิด Modal แทน window.confirm)
+  const prepareCancelOrder = (orderId: number) => {
+    setCancelTarget(orderId);
+  };
 
-    setCustomAlert({ title: "กำลังยกเลิกคำสั่งซื้อ...", message: "โปรดรอสักครู่", type: "loading" });
+  // 😭 ฟังก์ชันยืนยันการยกเลิก (เล่นแอนิเมชันร้องไห้งอแง)
+  const executeCancelOrder = async () => {
+    if (cancelTarget === null) return;
+    setIsCancelingOrder(true); // เริ่มเล่นแอนิเมชัน
 
-    const { error } = await supabase.from('orders').update({ status: 'ยกเลิกแล้ว' }).eq('id', orderId);
-    if (error) {
-      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถยกเลิกคำสั่งซื้อได้", type: "error" });
-    } else {
-      const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
-      fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "cancel", orderId: orderId })
-      }).catch(console.error);
+    // รอแอนิเมชันเล่นจบ 1.5 วินาที แล้วยกเลิกออเดอร์
+    setTimeout(async () => {
+      const orderId = cancelTarget;
+      const { error } = await supabase.from('orders').update({ status: 'ยกเลิกแล้ว' }).eq('id', orderId);
+      
+      setIsCancelingOrder(false);
+      setCancelTarget(null);
 
-      setCustomAlert({ title: "สำเร็จ", message: "ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว", type: "success" });
-      setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ยกเลิกแล้ว' } : o));
-      setTimeout(() => setCustomAlert(null), 1500);
-    }
+      if (error) {
+        setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถยกเลิกคำสั่งซื้อได้", type: "error" });
+      } else {
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
+        fetch(scriptUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "cancel", orderId: orderId })
+        }).catch(console.error);
+
+        showToast("✅ ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว (แง๊ๆๆๆ)");
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'ยกเลิกแล้ว' } : o));
+      }
+    }, 1500);
   };
 
   const handleLogout = async () => {
@@ -358,7 +372,6 @@ export default function AccountPage() {
     window.location.href = "/";
   };
 
-  // Helper ฟังก์ชันจัดฟอร์แมตวันที่ให้สวยงาม
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('th-TH', { 
       year: 'numeric', month: 'short', day: 'numeric', 
@@ -416,6 +429,55 @@ export default function AccountPage() {
               </div>
             ) : (
                <div className="text-red-500 font-extrabold animate-pulse text-xl uppercase tracking-widest">Kicking...</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- 😭 Custom Modal ยกเลิกออเดอร์ (ร้องไห้งอแง Pixel Style) 😭 --- */}
+      {cancelTarget !== null && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 font-mono">
+          <style>{`
+            @keyframes tantrum {
+              0% { transform: translate(0, 0) rotate(0deg); }
+              25% { transform: translate(-25px, 10px) rotate(-45deg); }
+              50% { transform: translate(25px, 10px) rotate(45deg); }
+              75% { transform: translate(-25px, 10px) rotate(-45deg); }
+              100% { transform: translate(0, 0) rotate(0deg); }
+            }
+            @keyframes tear-shoot-left {
+              0% { transform: translate(0, 0) scale(1); opacity: 1; }
+              100% { transform: translate(-80px, 40px) scale(1.5); opacity: 0; }
+            }
+            @keyframes tear-shoot-right {
+              0% { transform: translate(0, 0) scale(1); opacity: 1; }
+              100% { transform: translate(80px, 40px) scale(1.5); opacity: 0; }
+            }
+          `}</style>
+          
+          <div className="bg-gray-900 border-4 border-blue-500 w-full max-w-md rounded-none shadow-[10px_10px_0_0_rgba(59,130,246,1)] p-6 md:p-8 text-center flex flex-col items-center relative overflow-hidden">
+            <h3 className="text-2xl font-extrabold text-blue-400 mb-2 uppercase tracking-widest drop-shadow-md">NOOOOOOO! 😭</h3>
+            <p className="text-gray-300 mb-6 text-sm">
+              คุณแน่ใจหรอว่าจะ <span className="text-white bg-blue-700 px-2 py-0.5 font-bold">ยกเลิก</span> ออเดอร์นี้จริงๆ?<br/>
+              <span className="text-xs text-gray-500 mt-2 inline-block">(แอดมินร้องไห้แล้วนะ)</span>
+            </p>
+
+            <div className="relative w-full h-32 bg-gray-800 border-2 border-gray-700 mb-8 flex items-center justify-center overflow-hidden">
+               {/* น้ำตาซ้าย */}
+               {isCancelingOrder && <div className="text-4xl absolute z-10" style={{ animation: 'tear-shoot-left 0.5s infinite', left: '40%' }}>💦</div>}
+               {/* หน้าร้องไห้งอแง */}
+               <div className="text-7xl absolute z-20" style={{ animation: isCancelingOrder ? 'tantrum 0.4s infinite' : 'none', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>😭</div>
+               {/* น้ำตาขวา */}
+               {isCancelingOrder && <div className="text-4xl absolute z-10" style={{ animation: 'tear-shoot-right 0.5s infinite', left: '50%' }}>💦</div>}
+            </div>
+
+            {!isCancelingOrder ? (
+              <div className="flex gap-4 w-full">
+                <button onClick={() => setCancelTarget(null)} className="flex-1 bg-green-600 text-white font-bold py-3 border-b-4 border-green-800 hover:bg-green-500 hover:mt-1 hover:border-b-0 transition-all uppercase text-xs sm:text-sm">ไม่ยกเลิกแล้ว!</button>
+                <button onClick={executeCancelOrder} className="flex-1 bg-gray-600 text-white font-bold py-3 border-b-4 border-gray-800 hover:bg-gray-500 hover:mt-1 hover:border-b-0 transition-all uppercase text-xs sm:text-sm tracking-widest">ยืนยันยกเลิก</button>
+              </div>
+            ) : (
+               <div className="text-blue-500 font-extrabold animate-pulse text-xl uppercase tracking-widest">Crying... 😭😭😭</div>
             )}
           </div>
         </div>
@@ -479,7 +541,6 @@ export default function AccountPage() {
                 allOrders.map((order) => (
                   <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-4">
                     
-                    {/* 🌟 Header กล่องออเดอร์: ID, วันที่, และปุ่มลิงก์ไป Excel */}
                     <div className="bg-gray-50 border-b border-gray-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                       <div className="flex items-center gap-3">
                         <span className="bg-[#0a4a2f] text-[#f3c623] px-3 py-1 rounded-lg font-extrabold text-sm shadow-sm">ID: {order.id}</span>
@@ -488,10 +549,8 @@ export default function AccountPage() {
                       
                       <button
                         onClick={() => {
-                          // ก๊อปปี้ ID ไว้ให้แอดมินกด Ctrl+F หาใน Excel ได้เลย
                           navigator.clipboard.writeText(order.id.toString());
                           showToast(`📋 คัดลอกรหัส [ ${order.id} ] แล้ว! กด Ctrl+F ใน Excel เพื่อค้นหาได้เลย`);
-                          // เปิดลิงก์ Excel ไปแท็บใหม่
                           window.open(GOOGLE_SHEET_URL, "_blank");
                         }}
                         className="bg-green-100 text-green-700 hover:bg-green-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-green-300 shadow-sm w-full sm:w-auto justify-center"
@@ -721,8 +780,9 @@ export default function AccountPage() {
                         ยอดรวม: <span className="text-xl font-bold text-[#ee4d2d]">฿{order.total_price}</span>
                       </div>
                       <div className="flex gap-2 sm:gap-3 mt-1 w-full sm:w-auto justify-end">
+                        {/* 🌟 เปลี่ยนปุ่มยกเลิกตรงนี้ให้เด้ง Modal 😭 แทน */}
                         {order.status === 'รอดำเนินการ' && (
-                          <button onClick={() => handleCancelOrder(order.id)} className="px-4 py-2 bg-white text-gray-600 border border-gray-300 font-bold rounded-[4px] hover:bg-gray-50 transition shadow-sm text-sm">
+                          <button onClick={() => prepareCancelOrder(order.id)} className="px-4 py-2 bg-white text-gray-600 border border-gray-300 font-bold rounded-[4px] hover:bg-gray-50 transition shadow-sm text-sm">
                             ยกเลิกคำสั่งซื้อ
                           </button>
                         )}
