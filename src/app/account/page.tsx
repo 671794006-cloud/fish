@@ -25,11 +25,9 @@ export default function AccountPage() {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [adminTab, setAdminTab] = useState<"orders" | "admins">("orders");
 
-  // แจ้งเตือนแบบป๊อปอัป (Toast)
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
 
-  // สถานะระบบแผนที่แบบเลื่อนปักหมุด
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showMap, setShowMap] = useState(false); 
@@ -40,40 +38,61 @@ export default function AccountPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         window.location.href = "/login"; 
+        return;
+      } 
+      
+      setUser(session.user);
+      
+      const meta = session.user.user_metadata;
+      if (meta) {
+        setFullName(meta.fullName || "");
+        setPhone(meta.phone || "");
+        setAddressDetail(meta.addressDetail || "");
+        setMapLink(meta.mapLink || "");
+        setUserLocation(meta.userLocation || null);
+      }
+
+      // ดึงประวัติคำสั่งซื้อส่วนตัว
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      if (orderData) setOrders(orderData);
+
+      // 🌟 โค้ดระดับ VIP: ล็อกอีเมลแอดมินไว้ในระบบโดยตรง ป้องกันฐานข้อมูลบล็อก (ชัวร์ 100%)
+      const vipEmails = [
+        "banklce1210@gmail.com", 
+        "671794006@crru.ac.th"
+      ];
+      
+      let userIsAdmin = false;
+
+      // เช็กสิทธิ์ที่ 1: เป็นอีเมล VIP หรือเปล่า?
+      if (vipEmails.includes(session.user.email)) {
+        userIsAdmin = true;
       } else {
-        setUser(session.user);
-        
-        const meta = session.user.user_metadata;
-        if (meta) {
-          setFullName(meta.fullName || "");
-          setPhone(meta.phone || "");
-          setAddressDetail(meta.addressDetail || "");
-          setMapLink(meta.mapLink || "");
-          setUserLocation(meta.userLocation || null);
-        }
-
-        // 1. ดึงประวัติคำสั่งซื้อของตัวเอง
-        const { data: orderData } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false });
-        if (orderData) setOrders(orderData);
-
-        // 2. เช็กว่าเป็นแอดมินไหม (หัวใจสำคัญอยู่ตรงนี้!)
+        // เช็กสิทธิ์ที่ 2: ถ้าไม่ใช่ VIP ให้ไปค้นในตารางเผื่อมีเพื่อนแอดมินคนอื่น
         const { data: adminData } = await supabase
           .from("admins")
           .select("*")
           .eq("email", session.user.email)
-          .single();
+          .maybeSingle(); // ใช้ maybeSingle เพื่อไม่ให้เกิด Error แดงๆ ในคอนโซล
 
         if (adminData) {
-          setIsAdmin(true); 
-          fetchAllAdminData();
+          userIsAdmin = true; 
         }
       }
+
+      // ถ้าเป็นแอดมิน ให้เปิดปุ่มและดึงข้อมูลหลังบ้าน
+      if (userIsAdmin) {
+        setIsAdmin(true);
+        fetchAllAdminData();
+      }
+      
       setLoading(false);
     };
+    
     fetchUserAndOrders();
   }, []);
 
@@ -366,7 +385,7 @@ export default function AccountPage() {
                     </div>
                     <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shrink-0 w-full md:w-auto">
                       <label className="text-xs text-gray-500 font-bold block mb-1">สถานะปัจจุบัน:</label>
-                      <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300">
+                      <select value={order.status} onChange={(e) => updateOrderStatus(order.id, e.target.value)} className="w-full font-bold text-sm rounded-xl px-4 py-2 border border-gray-300 outline-none cursor-pointer">
                         <option value="รอดำเนินการ">🟠 รอดำเนินการ</option>
                         <option value="กำลังจัดส่ง">🔵 กำลังจัดส่ง</option>
                         <option value="จัดส่งสำเร็จ">🟢 จัดส่งสำเร็จ</option>
@@ -381,20 +400,20 @@ export default function AccountPage() {
 
           {adminTab === "admins" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-gray-200">
+              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">เพิ่มแอดมินใหม่</h3>
                 <form onSubmit={handleAddAdmin} className="space-y-3">
-                  <input type="email" required value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="อีเมล..." className="w-full p-3 border rounded-xl" />
-                  <button type="submit" className="w-full bg-[#0a4a2f] text-[#f3c623] font-bold py-3 rounded-xl">เพิ่มสิทธิ์</button>
+                  <input type="email" required value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="อีเมล..." className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-600" />
+                  <button type="submit" className="w-full bg-[#0a4a2f] text-[#f3c623] font-bold py-3 rounded-xl hover:bg-[#073622] transition shadow-md">เพิ่มสิทธิ์</button>
                 </form>
               </div>
-              <div className="bg-white p-6 rounded-3xl border border-gray-200">
+              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">รายชื่อผู้ดูแลระบบ</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {adminList.map((admin) => (
-                    <div key={admin.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border">
+                    <div key={admin.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
                       <span className="font-semibold text-sm">{admin.email}</span>
-                      <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 hover:bg-red-100 p-2 rounded">✕</button>
+                      <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 hover:bg-red-100 p-2 rounded transition">✕</button>
                     </div>
                   ))}
                 </div>
