@@ -17,9 +17,9 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // 🌟 ระบบสิทธิ์แอดมินของแท้!
+  // 🌟 ระบบสิทธิ์แอดมิน
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false); // 👑 เช็กว่าเป็นแอดมินสูงสุดไหม
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false); 
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   
   const [allOrders, setAllOrders] = useState<any[]>([]);
@@ -29,6 +29,10 @@ export default function AccountPage() {
 
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
+
+  // 💥 สถานะสำหรับแอนิเมชันเตะแอดมินสไตล์ Pixel
+  const [kickTarget, setKickTarget] = useState<{id: number, email: string} | null>(null);
+  const [isKicking, setIsKicking] = useState(false);
 
   const [mapLink, setMapLink] = useState("");
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -54,7 +58,6 @@ export default function AccountPage() {
         setUserLocation(meta.userLocation || null);
       }
 
-      // ดึงประวัติคำสั่งซื้อ
       const { data: orderData } = await supabase
         .from('orders')
         .select('*')
@@ -62,7 +65,6 @@ export default function AccountPage() {
         .order('created_at', { ascending: false });
       if (orderData) setOrders(orderData);
 
-      // 🌟 ดึงสิทธิ์แอดมินจากฐานข้อมูล 100% (ลบโค้ด VIP ฝังตัวทิ้งแล้ว!)
       const currentUserIdentifier = session.user.email || session.user.phone || "";
 
       if (currentUserIdentifier) {
@@ -74,7 +76,7 @@ export default function AccountPage() {
 
         if (adminData) {
           setIsAdmin(true); 
-          setIsSuperAdmin(adminData.is_super); // ดึงยศแอดมินสูงสุดมา
+          setIsSuperAdmin(adminData.is_super); 
           fetchAllAdminData();
         }
       }
@@ -96,7 +98,7 @@ export default function AccountPage() {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
     if (error) {
-      alert("อัปเดตสถานะไม่สำเร็จ: " + error.message);
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
     } else {
       showToast("✅ อัปเดตสถานะสำเร็จ");
       setAllOrders(allOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
@@ -112,9 +114,9 @@ export default function AccountPage() {
       accountToAdd = "+66" + accountToAdd.substring(1);
     }
 
-    const { error } = await supabase.from("admins").insert([{ email: accountToAdd, is_super: false }]); // แอดมินใหม่ที่เพิ่มจะเป็นแอดมินธรรมดาเสมอ
+    const { error } = await supabase.from("admins").insert([{ email: accountToAdd, is_super: false }]); 
     if (error) {
-      alert("ไม่สามารถเพิ่มแอดมินได้ (ข้อมูลนี้อาจมีอยู่แล้ว หรือพิมพ์ผิดครับ)");
+      setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถเพิ่มได้ ข้อมูลนี้อาจมีอยู่แล้ว", type: "error" });
     } else {
       showToast("✅ เพิ่มแอดมินใหม่เรียบร้อย!");
       setNewAdminAccount("");
@@ -122,37 +124,48 @@ export default function AccountPage() {
     }
   };
 
-  const handleRemoveAdmin = async (id: number, emailOrPhone: string) => {
+  // 💥 เตรียมเตะแอดมิน (เปิด Modal)
+  const prepareRemoveAdmin = (id: number, emailOrPhone: string) => {
     if (emailOrPhone === (user?.email || user?.phone)) {
-      alert("❌ คุณไม่สามารถลบตัวเองออกจากระบบได้ครับ!");
+      setCustomAlert({ title: "เตะตัวเองไม่ได้!", message: "คุณไม่สามารถเตะตัวเองออกจากระบบได้ครับ!", type: "error" });
       return;
     }
-    if (!window.confirm(`ยืนยันการลบสิทธิ์แอดมินของ\n${emailOrPhone} ?`)) return;
-    
-    const { error } = await supabase.from("admins").delete().eq("id", id);
-    if (!error) {
-      showToast("🗑️ ลบแอดมินสำเร็จ");
-      fetchAllAdminData();
-    }
+    setKickTarget({ id, email: emailOrPhone });
   };
 
-  // 👑 ฟังก์ชันโอนตำแหน่ง "แอดมินสูงสุด"
+  // 💥 ฟังก์ชันยืนยันการเตะ (เล่นแอนิเมชัน)
+  const confirmKickAdmin = async () => {
+    if (!kickTarget) return;
+    setIsKicking(true); // เริ่มเล่นแอนิเมชัน
+
+    // รอแอนิเมชันเล่นจบ 1.5 วินาที แล้วค่อยลบจากฐานข้อมูล
+    setTimeout(async () => {
+      const { error } = await supabase.from("admins").delete().eq("id", kickTarget.id);
+      setIsKicking(false);
+      setKickTarget(null);
+      
+      if (!error) {
+        showToast("🦵 เตะกระเด็นออกจากระบบเรียบร้อย!");
+        fetchAllAdminData();
+      } else {
+        setCustomAlert({ title: "เกิดข้อผิดพลาด", message: "ลบสิทธิ์ไม่สำเร็จ", type: "error" });
+      }
+    }, 1500);
+  };
+
   const handleTransferSuperAdmin = async (targetId: number, targetEmail: string) => {
     if (!window.confirm(`⚠️ คำเตือนระดับสูงสุด!\n\nคุณต้องการโอนตำแหน่ง "👑 แอดมินสูงสุด" ให้กับ ${targetEmail} ใช่หรือไม่?\n\nเมื่อโอนแล้ว คุณจะกลายเป็นแอดมินธรรมดา และไม่สามารถดึงสิทธิ์คืนได้เองอีกต่อไป!`)) return;
 
     setCustomAlert({ title: "กำลังโอนสิทธิ์...", message: "โปรดรอสักครู่", type: "loading" });
 
-    // 1. ถอดสิทธิ์แอดมินสูงสุดของตัวเอง
     await supabase.from("admins").update({ is_super: false }).eq("email", user?.email || user?.phone);
-    
-    // 2. มอบสิทธิ์แอดมินสูงสุดให้คนใหม่
     const { error } = await supabase.from("admins").update({ is_super: true }).eq("id", targetId);
 
     if (error) {
       setCustomAlert({ title: "เกิดข้อผิดพลาด", message: error.message, type: "error" });
     } else {
       setCustomAlert({ title: "โอนสิทธิ์สำเร็จ!", message: `แอดมินสูงสุดถูกเปลี่ยนเป็น ${targetEmail} เรียบร้อยแล้ว`, type: "success" });
-      setIsSuperAdmin(false); // ตัวเองหลุดจากการเป็น Super Admin ในหน้าจอทันที
+      setIsSuperAdmin(false); 
       fetchAllAdminData();
       setTimeout(() => setCustomAlert(null), 2500);
     }
@@ -333,13 +346,67 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans pb-20 relative">
       
+      {/* --- 💥 Custom Modal เตะแอดมิน (Pixel Art Style) 💥 --- */}
+      {kickTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 font-mono">
+          <style>{`
+            @keyframes windup {
+              0% { transform: translateX(0) rotate(0); }
+              30% { transform: translateX(-30px) rotate(-25deg); }
+              50% { transform: translateX(40px) rotate(15deg); }
+              100% { transform: translateX(40px) rotate(15deg); }
+            }
+            @keyframes flyaway {
+              0% { transform: translateX(0) rotate(0); opacity: 1; }
+              45% { transform: translateX(0) rotate(0); opacity: 1; }
+              50% { transform: translateX(20px) rotate(45deg); opacity: 1; }
+              100% { transform: translateX(350px) rotate(1080deg) scale(0.3); opacity: 0; }
+            }
+            @keyframes powEffect {
+              0% { opacity: 0; transform: scale(0.5); }
+              49% { opacity: 0; transform: scale(0.5); }
+              50% { opacity: 1; transform: scale(2); }
+              80% { opacity: 0; transform: scale(2.5); }
+              100% { opacity: 0; }
+            }
+          `}</style>
+          
+          <div className="bg-gray-900 border-4 border-red-600 w-full max-w-md rounded-none shadow-[10px_10px_0_0_rgba(220,38,38,1)] p-6 md:p-8 text-center flex flex-col items-center relative overflow-hidden">
+            <h3 className="text-2xl font-extrabold text-red-500 mb-2 uppercase tracking-widest drop-shadow-md">⚠️ Warning ⚠️</h3>
+            <p className="text-gray-300 mb-6 text-sm">
+              คุณกำลังจะเตะแอดมินท่านนี้<br/>
+              <span className="text-white bg-red-700 px-3 py-1 inline-block mt-3 font-bold border-2 border-red-900">{kickTarget.email}</span>
+            </p>
+
+            {/* เวทีจำลองการเตะ */}
+            <div className="relative w-full h-32 bg-gray-800 border-2 border-gray-700 mb-8 flex items-center justify-center overflow-hidden">
+               {/* เอฟเฟกต์ระเบิด */}
+               <div className="text-6xl absolute z-10" style={{ animation: isKicking ? 'powEffect 1.5s forwards' : 'none', opacity: 0, left: '50%' }}>💥</div>
+               {/* รองเท้า */}
+               <div className="text-6xl absolute z-20" style={{ animation: isKicking ? 'windup 1.5s forwards' : 'none', left: '30%', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>👞</div>
+               {/* คนโดนเตะ */}
+               <div className="text-6xl absolute z-10" style={{ animation: isKicking ? 'flyaway 1.5s forwards' : 'none', left: '50%', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>🧍</div>
+            </div>
+
+            {!isKicking ? (
+              <div className="flex gap-4 w-full">
+                <button onClick={() => setKickTarget(null)} className="flex-1 bg-gray-600 text-white font-bold py-3 border-b-4 border-gray-800 hover:bg-gray-500 hover:mt-1 hover:border-b-0 transition-all uppercase">Cancel</button>
+                <button onClick={confirmKickAdmin} className="flex-1 bg-red-600 text-white font-bold py-3 border-b-4 border-red-900 hover:bg-red-500 hover:mt-1 hover:border-b-0 transition-all uppercase tracking-widest">🔥 Kick!</button>
+              </div>
+            ) : (
+               <div className="text-red-500 font-extrabold animate-pulse text-xl uppercase tracking-widest">Kicking...</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {toastMessage && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#0a4a2f] text-[#f3c623] px-6 py-3 rounded-full shadow-2xl z-[100] font-bold text-sm flex items-center gap-2 animate-bounce">
           {toastMessage}
         </div>
       )}
 
-      {/* ป๊อปอัปแจ้งเตือน (Modal) */}
+      {/* ป๊อปอัปแจ้งเตือนปกติ */}
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 md:p-8 text-center flex flex-col items-center relative animate-in fade-in zoom-in duration-200">
@@ -364,7 +431,7 @@ export default function AccountPage() {
         </button>
       </nav>
 
-      {/* 🌟 หน้าจัดการหลังบ้านสำหรับ Admin เท่านั้น */}
+      {/* 🌟 หน้าจัดการหลังบ้าน */}
       {isAdmin && showAdminPanel ? (
         <div className="max-w-5xl mx-auto px-4 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-yellow-50 border border-yellow-200 p-4 rounded-t-3xl shadow-sm mb-6 gap-4">
@@ -439,16 +506,15 @@ export default function AccountPage() {
                         </div>
                         
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          {/* 👑 ปุ่มโอนสิทธิ์: โชว์เฉพาะถ้าเราเป็น SuperAdmin และคนนี้ไม่ใช่ SuperAdmin */}
                           {isSuperAdmin && !admin.is_super && (
                             <button onClick={() => handleTransferSuperAdmin(admin.id, admin.email)} className="text-[10px] bg-white text-purple-700 hover:bg-purple-50 px-3 py-2 rounded-lg font-bold transition shadow-sm border border-purple-200 whitespace-nowrap">
                               โอนสิทธิ์ 👑
                             </button>
                           )}
                           
-                          {/* ❌ ปุ่มลบ: ลบแอดมินสูงสุดไม่ได้ */}
+                          {/* 💥 กดปุ่มนี้แล้วจะเด้งหน้าต่าง Pixel เตะแอดมิน 💥 */}
                           {!admin.is_super && (
-                            <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-bold text-xs shadow-sm whitespace-nowrap">
+                            <button onClick={() => prepareRemoveAdmin(admin.id, admin.email)} className="text-red-500 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-bold text-xs shadow-sm whitespace-nowrap">
                               ลบสิทธิ์
                             </button>
                           )}
@@ -477,7 +543,6 @@ export default function AccountPage() {
                 <p className="text-green-200 text-sm mt-1">{user?.email || user?.phone}</p>
               </div>
             </div>
-            {/* 🌟 ปุ่มลับสำหรับแอดมิน ให้กดสลับไปหน้าจัดการ */}
             {isAdmin && (
               <button onClick={() => setShowAdminPanel(true)} className="hidden md:flex bg-[#f3c623] hover:bg-yellow-400 text-[#0a4a2f] px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition items-center gap-2">
                 ⚙️ จัดการร้านค้า
@@ -485,7 +550,6 @@ export default function AccountPage() {
             )}
           </div>
 
-          {/* ปุ่มลับแอดมินสำหรับจอมือถือ */}
           {isAdmin && (
             <div className="bg-yellow-50 p-3 md:hidden">
               <button onClick={() => setShowAdminPanel(true)} className="w-full bg-[#f3c623] text-[#0a4a2f] py-3 rounded-xl font-bold shadow-sm flex justify-center items-center gap-2">
