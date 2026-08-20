@@ -22,7 +22,7 @@ export default function AccountPage() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [adminList, setAdminList] = useState<any[]>([]);
-  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminAccount, setNewAdminAccount] = useState(""); // ใช้ได้ทั้งอีเมลและเบอร์โทร
   const [adminTab, setAdminTab] = useState<"orders" | "admins">("orders");
 
   const [toastMessage, setToastMessage] = useState(""); 
@@ -60,31 +60,31 @@ export default function AccountPage() {
         .order('created_at', { ascending: false });
       if (orderData) setOrders(orderData);
 
-      // 🌟 โค้ดระดับ VIP: ล็อกอีเมลแอดมินไว้ในระบบโดยตรง ป้องกันฐานข้อมูลบล็อก (ชัวร์ 100%)
-      const vipEmails = [
+      // 🌟 โค้ดระดับ VIP: รองรับทั้งอีเมลและเบอร์โทรศัพท์
+      const vipAccounts = [
         "banklce1210@gmail.com", 
         "671794006@crru.ac.th"
       ];
       
       let userIsAdmin = false;
+      
+      // ดึงอีเมล หรือ เบอร์โทร (+66...) ที่ล็อกอินเข้ามา
+      const currentUserIdentifier = session.user.email || session.user.phone || "";
 
-      // เช็กสิทธิ์ที่ 1: เป็นอีเมล VIP หรือเปล่า?
-      if (vipEmails.includes(session.user.email)) {
+      if (currentUserIdentifier && vipAccounts.includes(currentUserIdentifier)) {
         userIsAdmin = true;
-      } else {
-        // เช็กสิทธิ์ที่ 2: ถ้าไม่ใช่ VIP ให้ไปค้นในตารางเผื่อมีเพื่อนแอดมินคนอื่น
+      } else if (currentUserIdentifier) {
         const { data: adminData } = await supabase
           .from("admins")
           .select("*")
-          .eq("email", session.user.email)
-          .maybeSingle(); // ใช้ maybeSingle เพื่อไม่ให้เกิด Error แดงๆ ในคอนโซล
+          .eq("email", currentUserIdentifier) // ใช้คอลัมน์ email เก็บทั้งเมลและเบอร์โทร
+          .maybeSingle(); 
 
         if (adminData) {
           userIsAdmin = true; 
         }
       }
 
-      // ถ้าเป็นแอดมิน ให้เปิดปุ่มและดึงข้อมูลหลังบ้าน
       if (userIsAdmin) {
         setIsAdmin(true);
         fetchAllAdminData();
@@ -116,23 +116,31 @@ export default function AccountPage() {
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail.trim()) return;
-    const { error } = await supabase.from("admins").insert([{ email: newAdminEmail }]);
+    let accountToAdd = newAdminAccount.trim();
+    if (!accountToAdd) return;
+
+    // ระบบฉลาด: ถ้าพิมพ์เบอร์มาเป็น 08x ให้แปลงเป็น +66 ให้อัตโนมัติ
+    if (/^0[0-9]{9}$/.test(accountToAdd)) {
+      accountToAdd = "+66" + accountToAdd.substring(1);
+    }
+
+    const { error } = await supabase.from("admins").insert([{ email: accountToAdd }]);
     if (error) {
-      alert("ไม่สามารถเพิ่มแอดมินได้ (อีเมลนี้อาจมีอยู่แล้ว หรือพิมพ์ผิดครับ)");
+      alert("ไม่สามารถเพิ่มแอดมินได้ (ข้อมูลนี้อาจมีอยู่แล้ว หรือพิมพ์ผิดครับ)");
     } else {
       showToast("✅ เพิ่มแอดมินใหม่เรียบร้อย!");
-      setNewAdminEmail("");
+      setNewAdminAccount("");
       fetchAllAdminData();
     }
   };
 
-  const handleRemoveAdmin = async (id: number, email: string) => {
-    if (email === user.email) {
+  const handleRemoveAdmin = async (id: number, emailOrPhone: string) => {
+    const currentUser = user?.email || user?.phone;
+    if (emailOrPhone === currentUser) {
       alert("❌ คุณไม่สามารถลบตัวเองออกจากระบบได้ครับ!");
       return;
     }
-    if (!window.confirm(`ยืนยันการลบสิทธิ์แอดมินของ\n${email} ?`)) return;
+    if (!window.confirm(`ยืนยันการลบสิทธิ์แอดมินของ\n${emailOrPhone} ?`)) return;
     const { error } = await supabase.from("admins").delete().eq("id", id);
     if (!error) {
       showToast("🗑️ ลบแอดมินสำเร็จ");
@@ -403,19 +411,24 @@ export default function AccountPage() {
               <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">เพิ่มแอดมินใหม่</h3>
                 <form onSubmit={handleAddAdmin} className="space-y-3">
-                  <input type="email" required value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="อีเมล..." className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-600" />
+                  <input type="text" required value={newAdminAccount} onChange={(e) => setNewAdminAccount(e.target.value)} placeholder="อีเมล หรือ เบอร์โทร (เช่น 0812345678)" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-600" />
                   <button type="submit" className="w-full bg-[#0a4a2f] text-[#f3c623] font-bold py-3 rounded-xl hover:bg-[#073622] transition shadow-md">เพิ่มสิทธิ์</button>
                 </form>
               </div>
               <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">รายชื่อผู้ดูแลระบบ</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {adminList.map((admin) => (
-                    <div key={admin.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                      <span className="font-semibold text-sm">{admin.email}</span>
-                      <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 hover:bg-red-100 p-2 rounded transition">✕</button>
-                    </div>
-                  ))}
+                  {adminList.map((admin) => {
+                    const isMe = admin.email === (user?.email || user?.phone);
+                    return (
+                      <div key={admin.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <span className="font-semibold text-sm">
+                          {admin.email} {isMe && <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full ml-1">คุณ</span>}
+                        </span>
+                        <button onClick={() => handleRemoveAdmin(admin.id, admin.email)} className="text-red-500 hover:bg-red-100 p-2 rounded transition">✕</button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -427,11 +440,12 @@ export default function AccountPage() {
           <div className="bg-[#0a4a2f] text-white p-8 rounded-t-3xl shadow-md flex justify-between items-center">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white text-[#0a4a2f] rounded-full flex items-center justify-center text-3xl font-extrabold uppercase shadow-inner">
-                {user?.email?.charAt(0) || "U"}
+                {/* ดึงตัวอักษรแรกของอีเมลหรือเบอร์โทรมาแสดง */}
+                {(user?.email || user?.phone || "U").charAt(0).toUpperCase()}
               </div>
               <div>
                 <h1 className="text-2xl font-bold">บัญชีของฉัน</h1>
-                <p className="text-green-200 text-sm mt-1">{user?.email}</p>
+                <p className="text-green-200 text-sm mt-1">{user?.email || user?.phone}</p>
               </div>
             </div>
             {/* 🌟 ปุ่มลับสำหรับแอดมิน ให้กดสลับไปหน้าจัดการ */}
