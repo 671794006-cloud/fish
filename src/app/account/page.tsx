@@ -44,7 +44,7 @@ export default function AccountPage() {
   const mapInstanceRef = useRef<any>(null);
 
   // ลิงก์ไปไฟล์ Excel ของคุณ
-  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLkXeTDVvyAY/edit#gid=0";
+  const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLKxeTDVvyAY/edit?gid=0#gid=0";
 
   useEffect(() => {
     const fetchUserAndOrders = async () => {
