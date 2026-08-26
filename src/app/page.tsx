@@ -19,7 +19,27 @@ export default function HomePage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // --- สถานะระบบตะกร้า ---
-  const [cart, setCart] = useState<Record<number, number>>({}); 
+  // 🌟 โหลดข้อมูลตะกร้าจาก localStorage ตอนเปิดเว็บครั้งแรก
+  const [cart, setCart] = useState<Record<number, number>>(() => {
+    if (typeof window !== "undefined") {
+      const savedCart = localStorage.getItem("my_shop_cart");
+      if (savedCart) {
+        try {
+          return JSON.parse(savedCart);
+        } catch (e) {
+          return {};
+        }
+      }
+    }
+    return {};
+  });
+
+  // 🌟 บันทึกลง localStorage ทุกครั้งที่ตะกร้ามีการเปลี่ยนแปลง
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("my_shop_cart", JSON.stringify(cart));
+    }
+  }, [cart]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
