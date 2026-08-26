@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import IntroLoader from "@/components/IntroLoader"; // 👈 1. เพิ่มการนำเข้า IntroLoader ตรงนี้
+// 🌟 แก้ไขที่อยู่ตรงนี้ให้ชี้เข้าไปในโฟลเดอร์ ui แล้วครับ
+import IntroLoader from "@/components/ui/IntroLoader"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-50">
-        <IntroLoader /> {/* 👈 2. แทรก IntroLoader ไว้เป็นสิ่งแรกสุดใน body */}
+        <IntroLoader /> 
         {children}
       </body>
     </html>
