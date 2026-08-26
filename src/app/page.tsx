@@ -25,9 +25,13 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [toastMessage, setToastMessage] = useState(""); 
   
-  // 🌟 (ใหม่) สถานะสำหรับป๊อปอัปแจ้งเตือนกลางหน้าจอ
+  // 🌟 สถานะสำหรับป๊อปอัปแจ้งเตือนกลางหน้าจอ
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
   
+  // 🌟 (ใหม่) สถานะสำหรับเก็บไฟล์สลิปโอนเงิน
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+
   // ฟอร์มข้อมูลจัดส่ง
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -322,9 +326,41 @@ export default function HomePage() {
       return;
     }
 
+    // 🌟 1. เช็กว่าแนบสลิปหรือยัง (เฉพาะตอนเลือกโอนเงิน)
+    let finalPaymentTypeText = "เก็บเงินปลายทาง (COD)";
+    
+    if (paymentMethod === "qr") {
+      if (!slipFile) {
+        setCustomAlert({ title: "ยังไม่ได้แนบสลิป", message: "กรุณาแนบหลักฐานการโอนเงิน (สลิป) ก่อนกดยืนยันการสั่งซื้อด้วยครับ", type: "error" });
+        return;
+      }
+
+      setCustomAlert({ title: "กำลังอัปโหลดสลิป...", message: "โปรดรอสักครู่ ระบบกำลังอัปโหลดหลักฐานการชำระเงิน", type: "loading" });
+
+      // อัปโหลดไฟล์ไปที่ Supabase (ใช้โฟลเดอร์ fish/slips)
+      const fileExt = slipFile.name.split('.').pop();
+      const fileName = `slip_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `slips/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fish')
+        .upload(filePath, slipFile);
+
+      if (uploadError) {
+        setCustomAlert({ title: "อัปโหลดสลิปไม่สำเร็จ", message: "ไม่สามารถแนบไฟล์สลิปได้ กรุณาลองอีกครั้งครับ\n" + uploadError.message, type: "error" });
+        return;
+      }
+
+      // ดึงลิงก์รูปภาพมา
+      const { data: { publicUrl } } = supabase.storage.from('fish').getPublicUrl(filePath);
+      
+      // เอาลิงก์สลิป ไปห้อยท้ายวิธีชำระเงิน (เพื่อส่งเข้า Excel ไปโชว์ให้แอดมินดู)
+      finalPaymentTypeText = `โอนเงิน / QR Code\nลิงก์สลิป: ${publicUrl}`;
+    }
+
     const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
-    // 🌟 1. เปิดหน้าป๊อปอัปหมุนโหลดติ้วๆ ก่อนเลย บล็อกหน้าจอไว้
+    // 🌟 2. ส่งข้อมูลการสั่งซื้อ
     setCustomAlert({ title: "กำลังดำเนินการ...", message: "โปรดรอสักครู่ ระบบกำลังส่งคำสั่งซื้อของคุณ", type: "loading" });
 
     let finalAddress = addressDetail;
@@ -334,7 +370,6 @@ export default function HomePage() {
 
     const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
     const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${finalAddress}\n\nรายการสินค้า:\n${orderListText}`;
-    const paymentTypeText = paymentMethod === "qr" ? "โอนเงิน / QR Code" : "เก็บเงินปลายทาง (COD)";
 
     try {
       const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
@@ -363,22 +398,24 @@ export default function HomePage() {
           address: finalAddress, 
           orderItems: orderListText,
           totalPrice: grandTotal,
-          paymentMethod: paymentTypeText
+          paymentMethod: finalPaymentTypeText // ลิงก์สลิปจะถูกแปะเข้าไปด้วยตรงนี้
         }),
       });
 
-      // ปิดหน้าตะกร้าต่างๆ
+      // ปิดหน้าตะกร้าและล้างข้อมูล
       setCart({});
       setMapLink(""); 
       setUserLocation(null);
+      setSlipFile(null);
+      setSlipPreview(null);
       setIsCartOpen(false);
       setShowPayment(false);
 
-      // 🌟 2. เปลี่ยนสถานะป๊อปอัปเป็นแจ้งเตือนว่า "สำเร็จแล้ว"
+      // 🌟 3. แจ้งเตือนสั่งซื้อสำเร็จ
       if (paymentMethod === "qr") {
         setCustomAlert({
           title: "สั่งซื้อสำเร็จ! 🎉",
-          message: `บันทึกคำสั่งซื้อเรียบร้อยแล้ว\nทางร้านจะรีบตรวจสอบยอดโอนและจัดส่งสินค้าครับ\n\n${fullAddressText}`,
+          message: `บันทึกคำสั่งซื้อและแนบสลิปเรียบร้อยแล้ว\nทางร้านจะรีบตรวจสอบและจัดส่งสินค้าครับ\n\n${fullAddressText}`,
           type: "success"
         });
       } else {
@@ -679,7 +716,7 @@ export default function HomePage() {
               <h2 className="text-lg md:text-xl font-bold text-[#f3c623] flex items-center gap-2">
                 {showPayment ? "📦 จัดส่งและชำระเงิน" : "🛒 ตะกร้าสินค้าของคุณ"}
               </h2>
-              <button onClick={() => { setIsCartOpen(false); setShowPayment(false); }} className="p-1.5 hover:bg-white/20 rounded-full transition text-white">
+              <button onClick={() => { setIsCartOpen(false); setShowPayment(false); setSlipFile(null); setSlipPreview(null); }} className="p-1.5 hover:bg-white/20 rounded-full transition text-white">
                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
@@ -860,6 +897,29 @@ export default function HomePage() {
                         <p className="text-gray-500">ชื่อบัญชี: <span className="font-bold text-[#0a4a2f]">นาย พงศ์พิชิต ทาบุญสม</span></p>
                         <p className="text-gray-500">ยอดที่ต้องโอน: <span className="font-extrabold text-orange-600 text-sm md:text-base">฿{grandTotal}</span></p>
                       </div>
+
+                      {/* 🌟 ฟังก์ชันอัปโหลดสลิป */}
+                      <div className="w-full bg-white p-3 rounded-xl border border-gray-200 mt-2 text-left">
+                        <label className="block text-xs md:text-sm font-bold text-gray-700 mb-2">แนบหลักฐานการโอนเงิน (สลิป) <span className="text-red-500">*</span></label>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setSlipFile(e.target.files[0]);
+                              setSlipPreview(URL.createObjectURL(e.target.files[0]));
+                            }
+                          }}
+                          className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-[#0a4a2f] hover:file:bg-green-100 transition cursor-pointer outline-none"
+                        />
+                        {slipPreview && (
+                          <div className="mt-3 relative inline-block">
+                            <img src={slipPreview} alt="Slip Preview" className="max-h-32 object-contain rounded-lg border border-gray-200 shadow-sm" />
+                            <button type="button" onClick={() => { setSlipFile(null); setSlipPreview(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-md hover:bg-red-600 transition">✕</button>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
                   ) : (
                     <div className="bg-orange-50 p-4 md:p-5 rounded-xl md:rounded-2xl border border-orange-200 text-center space-y-2">
@@ -872,8 +932,9 @@ export default function HomePage() {
                   )}
 
                   <div className="space-y-2 pt-2">
+                    {/* 🌟 เปลี่ยนชื่อปุ่มเป็น ยืนยันการสั่งซื้อ */}
                     <button type="button" onClick={handleConfirmOrder} className="w-full bg-[#0a4a2f] hover:bg-[#073622] text-[#f3c623] py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-sm md:text-lg transition shadow-md flex justify-center items-center gap-2">
-                      {paymentMethod === "qr" ? "ยืนยันการโอนเงิน / แจ้งชำระเงิน" : "ยืนยันการสั่งซื้อปลายทาง"}
+                      ยืนยันการสั่งซื้อ
                     </button>
                     <button type="button" onClick={() => setShowPayment(false)} className="w-full text-center text-[10px] md:text-xs text-gray-500 hover:text-gray-800 py-2 block">
                       ← ย้อนกลับไปแก้ไขตะกร้าสินค้า
