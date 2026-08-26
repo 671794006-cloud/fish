@@ -30,7 +30,7 @@ export default function AccountPage() {
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
 
-  // 💥 สถานะสำหรับแอนิเมชันเตะแอดมิน
+  // 💥 สถานะสำหรับแอนิเมชันเตะแอดมินสไตล์ Pixel
   const [kickTarget, setKickTarget] = useState<{id: number, email: string} | null>(null);
   const [isKicking, setIsKicking] = useState(false);
 
@@ -43,7 +43,7 @@ export default function AccountPage() {
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null);
 
-  // ลิงก์ไปไฟล์ Excel ของคุณ
+  // 🌟 อัปเดตลิงก์ Excel ล่าสุดของคุณแล้วครับ!
   const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLKxeTDVvyAY/edit?gid=0#gid=0";
 
   useEffect(() => {
@@ -187,6 +187,7 @@ export default function AccountPage() {
     } else {
       setCustomAlert({ title: "โอนสิทธิ์สำเร็จ!", message: `แอดมินสูงสุดถูกเปลี่ยนเป็น ${targetEmail} เรียบร้อยแล้ว`, type: "success" });
       setIsSuperAdmin(false); 
+      setAdminTab("orders"); // 🌟 เด้งกลับไปหน้าออเดอร์อัตโนมัติเมื่อกลายเป็นแอดมินธรรมดา
       fetchAllAdminData();
       setTimeout(() => setCustomAlert(null), 2500);
     }
@@ -332,17 +333,16 @@ export default function AccountPage() {
     setSaving(false);
   };
 
-  // 😭 เตรียมยกเลิกออเดอร์ (เปิด Modal แทน window.confirm)
+  // 😭 เตรียมยกเลิกออเดอร์ (เปิด Modal)
   const prepareCancelOrder = (orderId: number) => {
     setCancelTarget(orderId);
   };
 
-  // 😭 ฟังก์ชันยืนยันการยกเลิก (เล่นแอนิเมชันร้องไห้งอแง)
+  // 😭 ฟังก์ชันยืนยันการยกเลิก
   const executeCancelOrder = async () => {
     if (cancelTarget === null) return;
-    setIsCancelingOrder(true); // เริ่มเล่นแอนิเมชัน
+    setIsCancelingOrder(true); 
 
-    // รอแอนิเมชันเล่นจบ 1.5 วินาที แล้วยกเลิกออเดอร์
     setTimeout(async () => {
       const orderId = cancelTarget;
       const { error } = await supabase.from('orders').update({ status: 'ยกเลิกแล้ว' }).eq('id', orderId);
@@ -463,11 +463,8 @@ export default function AccountPage() {
             </p>
 
             <div className="relative w-full h-32 bg-gray-800 border-2 border-gray-700 mb-8 flex items-center justify-center overflow-hidden">
-               {/* น้ำตาซ้าย */}
                {isCancelingOrder && <div className="text-4xl absolute z-10" style={{ animation: 'tear-shoot-left 0.5s infinite', left: '40%' }}>💦</div>}
-               {/* หน้าร้องไห้งอแง */}
                <div className="text-7xl absolute z-20" style={{ animation: isCancelingOrder ? 'tantrum 0.4s infinite' : 'none', filter: 'drop-shadow(4px 4px 0px rgba(0,0,0,0.5))' }}>😭</div>
-               {/* น้ำตาขวา */}
                {isCancelingOrder && <div className="text-4xl absolute z-10" style={{ animation: 'tear-shoot-right 0.5s infinite', left: '50%' }}>💦</div>}
             </div>
 
@@ -528,7 +525,10 @@ export default function AccountPage() {
 
           <div className="flex gap-2 mb-6">
             <button onClick={() => setAdminTab("orders")} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${adminTab === "orders" ? "bg-[#0a4a2f] text-[#f3c623] shadow-md" : "bg-white text-gray-500 border border-gray-200"}`}>📦 รายการออเดอร์</button>
-            <button onClick={() => setAdminTab("admins")} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${adminTab === "admins" ? "bg-[#0a4a2f] text-[#f3c623] shadow-md" : "bg-white text-gray-500 border border-gray-200"}`}>🔑 จัดการแอดมิน</button>
+            {/* 🌟 ซ่อนปุ่มแท็บแอดมินสำหรับแอดมินทั่วไป */}
+            {isSuperAdmin && (
+              <button onClick={() => setAdminTab("admins")} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${adminTab === "admins" ? "bg-[#0a4a2f] text-[#f3c623] shadow-md" : "bg-white text-gray-500 border border-gray-200"}`}>🔑 จัดการแอดมิน</button>
+            )}
           </div>
 
           {adminTab === "orders" && (
@@ -588,7 +588,8 @@ export default function AccountPage() {
             </div>
           )}
 
-          {adminTab === "admins" && (
+          {/* 🌟 ซ่อนเนื้อหาการจัดการแอดมินสำหรับแอดมินทั่วไป */}
+          {isSuperAdmin && adminTab === "admins" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm h-fit">
                 <h3 className="font-bold mb-4 text-[#0a4a2f]">เพิ่มแอดมินใหม่</h3>
@@ -780,7 +781,6 @@ export default function AccountPage() {
                         ยอดรวม: <span className="text-xl font-bold text-[#ee4d2d]">฿{order.total_price}</span>
                       </div>
                       <div className="flex gap-2 sm:gap-3 mt-1 w-full sm:w-auto justify-end">
-                        {/* 🌟 เปลี่ยนปุ่มยกเลิกตรงนี้ให้เด้ง Modal 😭 แทน */}
                         {order.status === 'รอดำเนินการ' && (
                           <button onClick={() => prepareCancelOrder(order.id)} className="px-4 py-2 bg-white text-gray-600 border border-gray-300 font-bold rounded-[4px] hover:bg-gray-50 transition shadow-sm text-sm">
                             ยกเลิกคำสั่งซื้อ
