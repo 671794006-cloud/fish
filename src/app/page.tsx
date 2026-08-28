@@ -14,7 +14,7 @@ export default function HomePage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<any>(null);
 
-  // 🌟 (ใหม่) ระบบจัดการธีม (Light / Pitch Black)
+  // 🌟 ระบบจัดการธีม (Auto-detect System Theme)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // --- สถานะระบบค้นหาสินค้า ---
@@ -50,22 +50,38 @@ export default function HomePage() {
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null); 
 
-  // โหลดข้อมูลผู้ใช้และธีม
+  // 🌟 เช็ก Theme อัตโนมัติเมื่อเข้าเว็บ
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
+      if (savedTheme) {
+        setTheme(savedTheme); // ถ้าเคยเลือกไว้ เอาตามที่เคยเลือก
+      } else {
+        // ถ้าไม่เคยเลือก ให้ดูว่าเครื่องลูกค้าตั้งค่า Dark Mode ไว้ไหม
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
+      }
+    }
+  }, []);
+
+  // 🌟 อัปเดต HTML Class และจำค่า Theme
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("shop_theme", theme);
+    }
+  }, [theme]);
+
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.defaultMuted = true;
       videoRef.current.muted = true;
       videoRef.current.play().catch(() => {});
-    }
-
-    // โหลด Theme จาก localStorage
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
-      if (savedTheme) {
-        setTheme(savedTheme);
-      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        setTheme('dark');
-      }
     }
 
     const checkUser = async () => {
@@ -91,17 +107,6 @@ export default function HomePage() {
 
     return () => { authListener.subscription.unsubscribe(); };
   }, []);
-
-  // อัปเดต HTML Class เพื่อสลับโหมดมืด/สว่าง
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem("shop_theme", theme);
-  }, [theme]);
 
   // บันทึกตะกร้า
   useEffect(() => {
@@ -382,7 +387,7 @@ export default function HomePage() {
       finalPaymentTypeText = `โอนเงิน / QR Code\nลิงก์สลิป: ${publicUrl}`;
     }
 
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
     setCustomAlert({ title: "กำลังดำเนินการ...", message: "โปรดรอสักครู่ ระบบกำลังส่งคำสั่งซื้อของคุณ", type: "loading" });
 
