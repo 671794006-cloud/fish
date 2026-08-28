@@ -17,10 +17,9 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // 🌟 (ใหม่) ระบบจัดการธีม ตั้งค่าเริ่มต้นเป็น 'light' (สว่างมาก่อน)
+  // 🌟 เช็ก Theme อัตโนมัติเมื่อเข้าเว็บให้เหมือนกับหน้าหลัก
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  // 🌟 ระบบสิทธิ์แอดมิน
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false); 
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -47,13 +46,13 @@ export default function AccountPage() {
   const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mKZ2Jxbk7jQre97-GuoNKsRAgkqUaN5PLkXeTDVvyAY/edit?gid=0#gid=0";
 
   useEffect(() => {
-    // โหลด Theme จาก localStorage (ถ้าเคยเลือกไว้) แต่ถ้ายังไม่เคย ตั้งเป็น 'light'
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
       if (savedTheme) {
         setTheme(savedTheme);
       } else {
-        setTheme('light');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
       }
     }
 
@@ -111,7 +110,9 @@ export default function AccountPage() {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem("shop_theme", theme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("shop_theme", theme);
+    }
   }, [theme]);
 
   const fetchAllAdminData = async () => {
@@ -617,6 +618,7 @@ export default function AccountPage() {
             </div>
           )}
 
+          {/* 🌟 ซ่อนเนื้อหาการจัดการแอดมินสำหรับแอดมินทั่วไป */}
           {isSuperAdmin && adminTab === "admins" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-3xl border border-gray-200 dark:border-neutral-800 shadow-sm h-fit">
