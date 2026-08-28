@@ -34,8 +34,11 @@ export default function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [toastMessage, setToastMessage] = useState(""); 
   
+  // 🌟 (ใหม่) สถานะสำหรับเก็บจำนวนสินค้าตอนเปิดป๊อปอัปดูรายละเอียด
+  const [modalQty, setModalQty] = useState<number>(1);
+
+  const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
@@ -315,31 +318,28 @@ export default function HomePage() {
     }
   };
 
-  const addToCartOnly = (productId: number) => {
-    setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
+  // 🌟 (อัปเดต) รับค่าจำนวน (qty) เข้ามาด้วย
+  const addToCartOnly = (productId: number, qty: number = 1) => {
+    setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + qty }));
     showToast("🛒 เพิ่มสินค้าลงตะกร้าแล้ว");
   };
 
-  const buyNow = (productId: number) => {
-    setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
+  const buyNow = (productId: number, qty: number = 1) => {
+    setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + qty }));
     setIsCartOpen(true);
     setShowPayment(true); 
   };
 
-  // 🌟 (อัปเดต) ฟังก์ชันกดปุ่มบวก-ลบ
+  // 🌟 (อัปเดต) ล็อกไม่ให้ค่าต่ำกว่า 1 เมื่อกดปุ่มลบ (-) ในตะกร้า
   const updateQty = (productId: number, delta: number) => {
     setCart((prev) => {
-      const newQty = (prev[productId] || 0) + delta;
-      if (newQty <= 0) {
-        const newCart = { ...prev };
-        delete newCart[productId];
-        return newCart;
-      }
+      let newQty = (prev[productId] || 0) + delta;
+      if (newQty < 1) newQty = 1; // บังคับให้ต่ำสุดคือ 1 (ไม่ลบออก)
       return { ...prev, [productId]: newQty };
     });
   };
 
-  // 🌟 (ใหม่) ฟังก์ชันลบสินค้าออกจากตะกร้ารวดเดียว
+  // 🌟 (ใหม่) ฟังก์ชันลบสินค้าออกจากตะกร้าโดยสมบูรณ์ (ใช้กับปุ่มถังขยะ)
   const removeItem = (productId: number) => {
     setCart((prev) => {
       const newCart = { ...prev };
@@ -349,10 +349,10 @@ export default function HomePage() {
     showToast("🗑️ ลบสินค้าออกจากตะกร้าแล้ว");
   };
 
-  // 🌟 (ใหม่) ฟังก์ชันสำหรับการพิมพ์ตัวเลขโดยตรง
+  // 🌟 ฟังก์ชันจัดการตอนลูกค้าพิมพ์ตัวเลขจำนวนสินค้าเอง
   const handleQtyChange = (productId: number, value: string) => {
     if (value === "") {
-      setCart(prev => ({ ...prev, [productId]: 0 })); // ถ้าลบเลขออกหมดให้เป็น 0 ชั่วคราวเพื่อรอพิมพ์ใหม่
+      setCart(prev => ({ ...prev, [productId]: 0 })); 
       return;
     }
     const num = parseInt(value, 10);
@@ -361,9 +361,9 @@ export default function HomePage() {
     }
   };
 
-  // 🌟 (ใหม่) ถ้าพิมพ์ค้างไว้เป็น 0 หรือว่างเปล่าแล้วคลิกออก จะปรับกลับมาเป็น 1 ให้
+  // 🌟 ถ้าย้ายเมาส์ออกแล้วพบว่าเป็นเลข 0 หรือว่างเปล่า ให้เด้งกลับเป็นเลข 1
   const handleQtyBlur = (productId: number) => {
-    if (cart[productId] === 0) {
+    if (cart[productId] < 1) {
       setCart(prev => ({ ...prev, [productId]: 1 }));
     }
   };
@@ -416,7 +416,7 @@ export default function HomePage() {
       finalPaymentTypeText = `โอนเงิน / QR Code\nลิงก์สลิป: ${publicUrl}`;
     }
 
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
 
     setCustomAlert({ title: "กำลังดำเนินการ...", message: "โปรดรอสักครู่ ระบบกำลังส่งคำสั่งซื้อของคุณ", type: "loading" });
 
@@ -544,7 +544,6 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 text-sm font-medium order-2 md:order-3">
-          {/* 🌟 ปุ่มสลับ Theme */}
           <button 
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className="p-1.5 md:p-2 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 transition"
@@ -607,6 +606,7 @@ export default function HomePage() {
                     key={item.id} 
                     onClick={() => {
                       setSelectedProduct(item);
+                      setModalQty(1); // 🌟 รีเซ็ตจำนวนให้เป็น 1 เสมอตอนเปิดดูสินค้าใหม่
                       setSearchQuery("");
                     }}
                     className="flex items-center gap-3 p-3 hover:bg-green-50 dark:hover:bg-neutral-800 cursor-pointer border-b border-gray-50 dark:border-neutral-800 last:border-0 transition"
@@ -661,7 +661,7 @@ export default function HomePage() {
             filteredProducts.map((item) => (
               <div key={item.id} className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-neutral-800 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-md transition duration-300">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 md:gap-6 items-start">
-                  <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-neutral-900 group cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                  <div className="sm:col-span-5 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-neutral-900 group cursor-pointer" onClick={() => { setSelectedProduct(item); setModalQty(1); }}>
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1626804475297-41609ea2b5eb?q=80&w=800&auto=format&fit=crop"; }} />
                     <div className="absolute inset-0 bg-black/20 dark:bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                       <span className="bg-white/90 dark:bg-black/90 text-[#0a4a2f] dark:text-green-400 px-4 py-2 rounded-full font-bold text-xs shadow-lg">🔍 ดูรายละเอียด</span>
@@ -669,7 +669,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="sm:col-span-7 flex flex-col justify-between h-full space-y-4">
-                    <div className="cursor-pointer" onClick={() => setSelectedProduct(item)}>
+                    <div className="cursor-pointer" onClick={() => { setSelectedProduct(item); setModalQty(1); }}>
                       <span className="inline-block text-[10px] md:text-xs font-bold text-[#0a4a2f] dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 mb-2">{item.vendor}</span>
                       <h3 className="text-lg md:text-xl font-extrabold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-[#0a4a2f] dark:hover:text-green-400 transition">{item.name}</h3>
                       <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm line-clamp-3">{item.description}</p>
@@ -755,15 +755,41 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
-                <button onClick={() => { addToCartOnly(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl border-2 border-[#0a4a2f] dark:border-green-500 text-[#0a4a2f] dark:text-green-400 font-bold hover:bg-green-50 dark:hover:bg-neutral-800 text-xs md:text-sm flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                  ใส่ตะกร้า
-                </button>
-                <button onClick={() => { buyNow(selectedProduct.id); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl bg-[#0a4a2f] dark:bg-green-600 text-[#f3c623] dark:text-white font-bold hover:bg-[#073622] dark:hover:bg-green-700 text-xs md:text-sm flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                  สั่งซื้อเลย
-                </button>
+              <div className="pt-4 border-t border-gray-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+                
+                {/* 🌟 (ใหม่) ระบบเลือกจำนวนในหน้าต่างรายละเอียดสินค้า */}
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">จำนวน:</span>
+                  <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-neutral-700 rounded-xl px-1 py-1 shadow-sm">
+                    <button onClick={() => setModalQty(Math.max(1, modalQty - 1))} className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg font-bold text-lg transition">-</button>
+                    <input 
+                      type="number" 
+                      value={modalQty === 0 ? "" : modalQty}
+                      onChange={(e) => {
+                        if (e.target.value === "") setModalQty(0);
+                        else {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val > 0) setModalQty(val);
+                        }
+                      }}
+                      onBlur={() => { if (modalQty < 1) setModalQty(1); }}
+                      className="w-10 text-center text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button onClick={() => setModalQty(modalQty + 1)} className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg font-bold text-lg transition">+</button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full sm:w-auto">
+                  <button onClick={() => { addToCartOnly(selectedProduct.id, modalQty); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl border-2 border-[#0a4a2f] dark:border-green-500 text-[#0a4a2f] dark:text-green-400 font-bold hover:bg-green-50 dark:hover:bg-neutral-800 text-xs md:text-sm flex items-center justify-center gap-2 transition">
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    ใส่ตะกร้า
+                  </button>
+                  <button onClick={() => { buyNow(selectedProduct.id, modalQty); setSelectedProduct(null); }} className="px-6 py-2.5 md:py-3 rounded-xl bg-[#0a4a2f] dark:bg-green-600 text-[#f3c623] dark:text-white font-bold hover:bg-[#073622] dark:hover:bg-green-700 text-xs md:text-sm flex items-center justify-center gap-2 transition shadow-md">
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    สั่งซื้อเลย
+                  </button>
+                </div>
+
               </div>
             </div>
           </div>
