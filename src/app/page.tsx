@@ -55,9 +55,8 @@ export default function HomePage() {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
       if (savedTheme) {
-        setTheme(savedTheme); // ถ้าเคยเลือกไว้ เอาตามที่เคยเลือก
+        setTheme(savedTheme); 
       } else {
-        // ถ้าไม่เคยเลือก ให้ดูว่าเครื่องลูกค้าตั้งค่า Dark Mode ไว้ไหม
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(prefersDark ? 'dark' : 'light');
       }
@@ -327,6 +326,7 @@ export default function HomePage() {
     setShowPayment(true); 
   };
 
+  // 🌟 (อัปเดต) ฟังก์ชันกดปุ่มบวก-ลบ
   const updateQty = (productId: number, delta: number) => {
     setCart((prev) => {
       const newQty = (prev[productId] || 0) + delta;
@@ -337,6 +337,35 @@ export default function HomePage() {
       }
       return { ...prev, [productId]: newQty };
     });
+  };
+
+  // 🌟 (ใหม่) ฟังก์ชันลบสินค้าออกจากตะกร้ารวดเดียว
+  const removeItem = (productId: number) => {
+    setCart((prev) => {
+      const newCart = { ...prev };
+      delete newCart[productId];
+      return newCart;
+    });
+    showToast("🗑️ ลบสินค้าออกจากตะกร้าแล้ว");
+  };
+
+  // 🌟 (ใหม่) ฟังก์ชันสำหรับการพิมพ์ตัวเลขโดยตรง
+  const handleQtyChange = (productId: number, value: string) => {
+    if (value === "") {
+      setCart(prev => ({ ...prev, [productId]: 0 })); // ถ้าลบเลขออกหมดให้เป็น 0 ชั่วคราวเพื่อรอพิมพ์ใหม่
+      return;
+    }
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num > 0) {
+      setCart(prev => ({ ...prev, [productId]: num }));
+    }
+  };
+
+  // 🌟 (ใหม่) ถ้าพิมพ์ค้างไว้เป็น 0 หรือว่างเปล่าแล้วคลิกออก จะปรับกลับมาเป็น 1 ให้
+  const handleQtyBlur = (productId: number) => {
+    if (cart[productId] === 0) {
+      setCart(prev => ({ ...prev, [productId]: 1 }));
+    }
   };
 
   const cartItems = Object.entries(cart).map(([id, qty]) => {
@@ -765,18 +794,34 @@ export default function HomePage() {
                   <div className="space-y-4">
                     <div className="max-h-[40vh] overflow-y-auto space-y-3 pr-2">
                       {cartItems.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center bg-gray-50 dark:bg-[#111] p-2 md:p-3 rounded-2xl border border-gray-100 dark:border-neutral-800">
-                          <div className="flex gap-2 md:gap-3 items-center w-full">
+                        <div key={item.id} className="flex justify-between items-center bg-gray-50 dark:bg-[#111] p-2 md:p-3 rounded-2xl border border-gray-100 dark:border-neutral-800 gap-2">
+                          <div className="flex gap-2 md:gap-3 items-center min-w-0 flex-1">
                             <img src={item.image} alt={item.name} className="w-12 h-12 md:w-14 md:h-14 object-cover rounded-xl border border-gray-200 dark:border-neutral-800 shrink-0" />
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0">
                               <h3 className="font-bold text-[#0a4a2f] dark:text-white text-xs md:text-sm truncate">{item.name}</h3>
-                              <p className="text-[10px] md:text-xs text-orange-600 dark:text-orange-400 font-semibold mt-0.5">฿{item.price} / {item.unit}</p>
+                              <p className="text-[10px] md:text-xs text-orange-600 dark:text-orange-400 font-semibold mt-0.5">฿{item.price}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 md:gap-2 bg-white dark:bg-black border border-gray-200 dark:border-neutral-700 rounded-full px-1.5 py-1 shadow-sm shrink-0 ml-1 md:ml-2">
-                            <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold">-</button>
-                            <span className="font-bold w-4 text-center text-xs md:text-sm dark:text-white">{item.qty}</span>
-                            <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold">+</button>
+                          
+                          {/* 🌟 (อัปเดต) กล่องควบคุมจำนวน + ถังขยะ */}
+                          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+                            <div className="flex items-center gap-1 bg-white dark:bg-black border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-1 shadow-sm">
+                              <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">-</button>
+                              
+                              <input 
+                                type="number" 
+                                value={item.qty === 0 ? "" : item.qty}
+                                onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                onBlur={() => handleQtyBlur(item.id)}
+                                className="w-6 md:w-8 text-center text-xs md:text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+
+                              <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">+</button>
+                            </div>
+
+                            <button onClick={() => removeItem(item.id)} className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 p-1.5 md:p-2 rounded-full transition" title="ลบสินค้า">
+                              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
                           </div>
                         </div>
                       ))}
