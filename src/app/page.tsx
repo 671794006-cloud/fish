@@ -332,7 +332,7 @@ export default function HomePage() {
     setShowPayment(true); 
   };
 
-  // 🌟 ล็อกไม่ให้ติดลบ แต่ให้ลงไปต่ำสุดที่ 0 ได้ (สินค้าไม่ถูกลบออกจากตะกร้า)
+  // ล็อกไม่ให้ลบสินค้าออกอัตโนมัติ ให้เหลือ 0 ไว้
   const updateQty = (productId: number, delta: number) => {
     setCart((prev) => {
       let newQty = (prev[productId] || 0) + delta;
@@ -341,7 +341,7 @@ export default function HomePage() {
     });
   };
 
-  // 🌟 ถังขยะเท่านั้นที่จะลบสินค้าออกไปจากตะกร้าอย่างสมบูรณ์
+  // ถังขยะเท่านั้นที่จะลบสินค้าออกไปจากตะกร้าอย่างสมบูรณ์
   const removeItem = (productId: number) => {
     setCart((prev) => {
       const newCart = { ...prev };
@@ -351,7 +351,7 @@ export default function HomePage() {
     showToast("🗑️ ลบสินค้าออกจากตะกร้าแล้ว");
   };
 
-  // 🌟 (อัปเดต) ถ้ายกดลบ (Backspace) ออกจนหมด ให้แสดงค่าเป็น 0 ทันที
+  // จัดการตอนลูกค้าพิมพ์ตัวเลข ให้ถ้าลบตัวเลขทิ้งทั้งหมด (Backspace) ค่าจะกลายเป็น 0 โชว์ที่ช่องทันที
   const handleQtyChange = (productId: number, value: string) => {
     if (value === "") {
       setCart(prev => ({ ...prev, [productId]: 0 })); 
@@ -539,12 +539,16 @@ export default function HomePage() {
       {/* 1. Navbar */}
       <nav className="flex flex-wrap items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-white dark:bg-[#0a0a0a] border-b border-green-100 dark:border-neutral-900 sticky top-0 z-40 shadow-sm transition-colors duration-300 gap-y-3">
         
-        <div className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f] dark:text-white">
+        {/* 🌟 (อัปเดต) เปลี่ยนโลโก้เป็นปุ่มที่กดแล้วเลื่อนกลับขึ้นบนสุด */}
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center gap-2 font-bold text-lg md:text-xl text-[#0a4a2f] dark:text-white hover:opacity-80 transition cursor-pointer text-left"
+        >
           <div className="bg-[#0a4a2f] dark:bg-green-600 p-1.5 md:p-2 rounded-full border-2 border-[#f3c623] dark:border-[#fde047]">
             <svg className="w-4 h-4 md:w-5 md:h-5 text-[#f3c623] dark:text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
           </div>
           วิสาหกิจบ้านป่าตึงงาม
-        </div>
+        </button>
 
         <div className="flex items-center gap-2 md:gap-3 text-sm font-medium order-2 md:order-3">
           <button 
@@ -812,7 +816,6 @@ export default function HomePage() {
 
             <div className="p-5 md:p-6">
               {!showPayment ? (
-                // 🌟 แก้เงื่อนไขให้เช็กจากจำนวน "รายการสินค้า" ไม่ใช่ "ยอดรวมชิ้น"
                 cartItems.length === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -834,15 +837,12 @@ export default function HomePage() {
                           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                             <div className="flex items-center gap-1 bg-white dark:bg-black border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-1 shadow-sm">
                               <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">-</button>
-                              
-                              {/* 🌟 ถ้าเป็นค่าว่าง (0) ให้แสดงเลข 0 ทันที */}
                               <input 
                                 type="number" 
                                 value={item.qty.toString()}
                                 onChange={(e) => handleQtyChange(item.id, e.target.value)}
                                 className="w-6 md:w-8 text-center text-xs md:text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
-
                               <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">+</button>
                             </div>
 
@@ -924,7 +924,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* 🌟 ย่อข้อมูลผู้รับ (Accordion) ประหยัดพื้นที่ */}
+                  {/* ย่อข้อมูลผู้รับ (Accordion) ประหยัดพื้นที่ */}
                   <div className="space-y-3">
                     <button 
                       type="button" 
