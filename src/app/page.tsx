@@ -14,7 +14,7 @@ export default function HomePage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<any>(null);
 
-  // 🌟 ระบบจัดการธีม (Auto-detect System Theme)
+  // 🌟 ระบบจัดการธีม
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // --- สถานะระบบค้นหาสินค้า ---
@@ -35,8 +35,11 @@ export default function HomePage() {
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   
-  // 🌟 (ใหม่) สถานะสำหรับเก็บจำนวนสินค้าตอนเปิดป๊อปอัปดูรายละเอียด
+  // สถานะเก็บจำนวนสินค้าตอนเปิดป๊อปอัปดูรายละเอียด
   const [modalQty, setModalQty] = useState<number>(1);
+
+  // 🌟 (ใหม่) สถานะเปิด/ปิดกล่องข้อมูลผู้รับสินค้า (เพื่อประหยัดพื้นที่)
+  const [isAddressOpen, setIsAddressOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState(""); 
   const [customAlert, setCustomAlert] = useState<{title: string, message: string, type: 'success' | 'error' | 'loading'} | null>(null);
@@ -53,7 +56,7 @@ export default function HomePage() {
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null); 
 
-  // 🌟 เช็ก Theme อัตโนมัติเมื่อเข้าเว็บ
+  // เช็ก Theme
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
@@ -66,7 +69,6 @@ export default function HomePage() {
     }
   }, []);
 
-  // 🌟 อัปเดต HTML Class และจำค่า Theme
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -318,7 +320,6 @@ export default function HomePage() {
     }
   };
 
-  // 🌟 (อัปเดต) รับค่าจำนวน (qty) เข้ามาด้วย
   const addToCartOnly = (productId: number, qty: number = 1) => {
     setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + qty }));
     showToast("🛒 เพิ่มสินค้าลงตะกร้าแล้ว");
@@ -330,16 +331,16 @@ export default function HomePage() {
     setShowPayment(true); 
   };
 
-  // 🌟 (อัปเดต) ล็อกไม่ให้ค่าต่ำกว่า 1 เมื่อกดปุ่มลบ (-) ในตะกร้า
+  // 🌟 (อัปเดต) ล็อกไม่ให้ลบสินค้าออกอัตโนมัติ ให้เหลือ 0 ไว้
   const updateQty = (productId: number, delta: number) => {
     setCart((prev) => {
       let newQty = (prev[productId] || 0) + delta;
-      if (newQty < 1) newQty = 1; // บังคับให้ต่ำสุดคือ 1 (ไม่ลบออก)
+      if (newQty < 0) newQty = 0; // บังคับไม่ให้ติดลบ แต่ยอมให้เป็น 0 ได้[cite: 3]
       return { ...prev, [productId]: newQty };
     });
   };
 
-  // 🌟 (ใหม่) ฟังก์ชันลบสินค้าออกจากตะกร้าโดยสมบูรณ์ (ใช้กับปุ่มถังขยะ)
+  // 🌟 ฟังก์ชันลบสินค้าออกจากตะกร้าโดยสมบูรณ์ (ใช้กับปุ่มถังขยะ)[cite: 3]
   const removeItem = (productId: number) => {
     setCart((prev) => {
       const newCart = { ...prev };
@@ -349,22 +350,15 @@ export default function HomePage() {
     showToast("🗑️ ลบสินค้าออกจากตะกร้าแล้ว");
   };
 
-  // 🌟 ฟังก์ชันจัดการตอนลูกค้าพิมพ์ตัวเลขจำนวนสินค้าเอง
+  // 🌟 (อัปเดต) จัดการตอนลูกค้าพิมพ์ตัวเลข ให้ถ้าลบตัวเลขทิ้งทั้งหมด (Backspace) ค่าจะกลายเป็น 0 โชว์ที่ช่องทันที[cite: 3]
   const handleQtyChange = (productId: number, value: string) => {
     if (value === "") {
       setCart(prev => ({ ...prev, [productId]: 0 })); 
       return;
     }
     const num = parseInt(value, 10);
-    if (!isNaN(num) && num > 0) {
+    if (!isNaN(num) && num >= 0) { // ยอมรับค่าที่ 0 ขึ้นไป
       setCart(prev => ({ ...prev, [productId]: num }));
-    }
-  };
-
-  // 🌟 ถ้าย้ายเมาส์ออกแล้วพบว่าเป็นเลข 0 หรือว่างเปล่า ให้เด้งกลับเป็นเลข 1
-  const handleQtyBlur = (productId: number) => {
-    if (cart[productId] < 1) {
-      setCart(prev => ({ ...prev, [productId]: 1 }));
     }
   };
 
@@ -379,7 +373,15 @@ export default function HomePage() {
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
   const handleConfirmOrder = async () => {
+    // 🌟 กรองเอาเฉพาะสินค้าที่มีจำนวนมากกว่า 0 (เพื่อป้องกันการส่งข้อมูลเปล่า)
+    const finalCartItems = cartItems.filter(item => item.qty > 0);
+    if (finalCartItems.length === 0) {
+      setCustomAlert({ title: "ตะกร้าว่างเปล่า", message: "กรุณาเลือกจำนวนสินค้าอย่างน้อย 1 ชิ้น", type: "error" });
+      return;
+    }
+
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
+      setIsAddressOpen(true); // 🌟 เด้งเปิดหน้าต่างผู้รับให้อัตโนมัติถ้าลืมกรอก
       setCustomAlert({ title: "ข้อมูลไม่ครบถ้วน", message: "กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์\nและที่อยู่จัดส่งให้ครบถ้วนครับ", type: "error" });
       return;
     }
@@ -416,7 +418,7 @@ export default function HomePage() {
       finalPaymentTypeText = `โอนเงิน / QR Code\nลิงก์สลิป: ${publicUrl}`;
     }
 
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbyRwXmahIGk6HRxmmILYd7RP_cF6zjtwjQhlMDavO9WyK9vq0s5CAN02aQk7z3PDM2k/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxK1f5QHqMGf7Av_whLADqwlHLf_k6RLGrCNsExZmIMt0-qLiI14Y-jASRLPa4dQ6NX/exec";
 
     setCustomAlert({ title: "กำลังดำเนินการ...", message: "โปรดรอสักครู่ ระบบกำลังส่งคำสั่งซื้อของคุณ", type: "loading" });
 
@@ -425,13 +427,14 @@ export default function HomePage() {
       finalAddress += `\n📍 พิกัดแผนที่: ${mapLink}`;
     }
 
-    const orderListText = cartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
+    // 🌟 ใช้ข้อมูลที่ตัด 0 ออกแล้วในการพิมพ์ใบเสร็จ
+    const orderListText = finalCartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
     const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${finalAddress}\n\nรายการสินค้า:\n${orderListText}`;
 
     try {
       const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
-        items: cartItems, 
+        items: finalCartItems, // 🌟 ส่งเฉพาะรายการที่ > 0
         total_price: grandTotal,
         status: 'รอดำเนินการ'
       }).select();
@@ -606,7 +609,7 @@ export default function HomePage() {
                     key={item.id} 
                     onClick={() => {
                       setSelectedProduct(item);
-                      setModalQty(1); // 🌟 รีเซ็ตจำนวนให้เป็น 1 เสมอตอนเปิดดูสินค้าใหม่
+                      setModalQty(1); 
                       setSearchQuery("");
                     }}
                     className="flex items-center gap-3 p-3 hover:bg-green-50 dark:hover:bg-neutral-800 cursor-pointer border-b border-gray-50 dark:border-neutral-800 last:border-0 transition"
@@ -757,22 +760,21 @@ export default function HomePage() {
 
               <div className="pt-4 border-t border-gray-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                 
-                {/* 🌟 (ใหม่) ระบบเลือกจำนวนในหน้าต่างรายละเอียดสินค้า */}
+                {/* 🌟 ระบบเลือกจำนวนในหน้าต่างรายละเอียดสินค้า */}
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
                   <span className="text-sm font-bold text-gray-700 dark:text-gray-300">จำนวน:</span>
                   <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-neutral-700 rounded-xl px-1 py-1 shadow-sm">
                     <button onClick={() => setModalQty(Math.max(1, modalQty - 1))} className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg font-bold text-lg transition">-</button>
                     <input 
                       type="number" 
-                      value={modalQty === 0 ? "" : modalQty}
+                      value={modalQty === 0 ? "0" : modalQty.toString()}
                       onChange={(e) => {
                         if (e.target.value === "") setModalQty(0);
                         else {
                           const val = parseInt(e.target.value);
-                          if (!isNaN(val) && val > 0) setModalQty(val);
+                          if (!isNaN(val) && val >= 0) setModalQty(val);
                         }
                       }}
-                      onBlur={() => { if (modalQty < 1) setModalQty(1); }}
                       className="w-10 text-center text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <button onClick={() => setModalQty(modalQty + 1)} className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg font-bold text-lg transition">+</button>
@@ -829,19 +831,16 @@ export default function HomePage() {
                             </div>
                           </div>
                           
-                          {/* 🌟 (อัปเดต) กล่องควบคุมจำนวน + ถังขยะ */}
+                          {/* 🌟 กล่องควบคุมจำนวน + ถังขยะ ในหน้าตะกร้า */}
                           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                             <div className="flex items-center gap-1 bg-white dark:bg-black border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-1 shadow-sm">
                               <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">-</button>
-                              
                               <input 
                                 type="number" 
-                                value={item.qty === 0 ? "" : item.qty}
+                                value={item.qty.toString()}
                                 onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                onBlur={() => handleQtyBlur(item.id)}
                                 className="w-6 md:w-8 text-center text-xs md:text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
-
                               <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">+</button>
                             </div>
 
@@ -887,15 +886,29 @@ export default function HomePage() {
                       </span>
                     </div>
 
-                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                       {cartItems.map((item) => (
                         <div key={item.id} className="flex gap-2 md:gap-3 items-center bg-white dark:bg-black p-2 rounded-xl border border-green-100 dark:border-neutral-800 shadow-sm">
                           <img src={item.image} alt={item.name} className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-lg border border-gray-200 dark:border-neutral-800 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-bold text-[#0a4a2f] dark:text-gray-200 text-[10px] md:text-xs truncate">{item.name}</h4>
-                            <div className="flex justify-between items-center mt-0.5">
-                              <span className="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-500 font-medium">฿{item.price} x {item.qty}</span>
-                              <span className="font-extrabold text-orange-600 dark:text-orange-400 text-[10px] md:text-xs">฿{item.price * item.qty}</span>
+                            
+                            {/* 🌟 (อัปเดต) กล่องควบคุมจำนวน + ถังขยะ ในหน้าจัดส่งและชำระเงินตามที่คุณขอ! */}
+                            <div className="flex justify-between items-center mt-1 w-full gap-2">
+                              <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-0.5 shadow-sm">
+                                <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-full font-bold text-sm">-</button>
+                                <input 
+                                  type="number" 
+                                  value={item.qty.toString()}
+                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                  className="w-6 text-center text-[10px] md:text-xs font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-full font-bold text-sm">+</button>
+                              </div>
+                              <span className="font-extrabold text-orange-600 dark:text-orange-400 text-[10px] md:text-xs ml-auto">฿{item.price * item.qty}</span>
+                              <button onClick={() => removeItem(item.id)} className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 p-1 md:p-1.5 rounded-full transition" title="ลบสินค้า">
+                                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -910,66 +923,80 @@ export default function HomePage() {
                     </div>
                   </div>
 
+                  {/* 🌟 ย่อข้อมูลผู้รับ (Accordion) ประหยัดพื้นที่ */}
                   <div className="space-y-3">
-                    <h3 className="text-xs md:text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                      <svg className="w-4 h-4 text-green-700 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      ข้อมูลผู้รับสินค้า
-                    </h3>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsAddressOpen(!isAddressOpen)} 
+                      className="w-full flex items-center justify-between p-3 bg-white dark:bg-[#111] border border-gray-200 dark:border-neutral-800 rounded-xl md:rounded-2xl shadow-sm transition hover:bg-gray-50 dark:hover:bg-neutral-800"
+                    >
+                      <h3 className="text-xs md:text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <svg className="w-4 h-4 text-green-700 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        ข้อมูลผู้รับสินค้า
+                      </h3>
+                      <span className="text-gray-500 dark:text-gray-400 text-[10px] md:text-xs font-bold bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded-lg">
+                        {isAddressOpen ? "▲ ย่อเก็บ" : "▼ กดเพื่อดู/แก้ไข"}
+                      </span>
+                    </button>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
-                      <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="ชื่อ-นามสกุล *" className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
-                      <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรศัพท์ *" className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
-                    </div>
+                    {isAddressOpen && (
+                      <div className="space-y-3 animate-in fade-in slide-in-from-top-2 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+                          <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="ชื่อ-นามสกุล *" className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
+                          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรศัพท์ *" className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
+                        </div>
 
-                    <div className="space-y-1">
-                      <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด..." className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-500">💡 พิมพ์ที่อยู่เต็ม แล้วกดค้นหาพิกัดด้านล่างได้เลย</span>
-                        {user && (
-                          <button type="button" onClick={handleQuickSaveAddress} className="text-[10px] md:text-xs text-green-700 dark:text-green-500 font-bold hover:underline">
-                            💾 บันทึกเป็นที่อยู่ประจำ
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2 pt-1">
-                      <div className="flex gap-2">
-                        <button type="button" onClick={handleSearchAddress} className="flex-1 p-2.5 rounded-xl border bg-gray-100 dark:bg-neutral-800 border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 text-xs md:text-sm font-bold transition flex items-center justify-center gap-2">
-                          🔍 ค้นหาพิกัดจากที่อยู่
-                        </button>
-                      </div>
-
-                      {!showMap ? (
-                        <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-400 shadow-sm' : 'bg-white dark:bg-[#111] border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'}`}>
-                          <svg className="w-4 h-4 md:w-5 md:h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                          {mapLink ? "📍 แก้ไขพิกัดปักหมุด" : "📍 เปิดแผนที่เพื่อปักหมุด (เลื่อนหาเองได้)"}
-                        </button>
-                      ) : (
-                        <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[350px] animate-in fade-in zoom-in duration-300">
-                          <div className="bg-[#0a4a2f] text-white text-xs md:text-sm text-center py-2 font-bold flex justify-between items-center px-4">
-                            <span>📍 ใช้นิ้วเลื่อนแผนที่ให้ตรงกับบ้านคุณ</span>
-                            <button type="button" onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
+                        <div className="space-y-1">
+                          <textarea value={addressDetail} onChange={(e) => setAddressDetail(e.target.value)} rows={2} placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด..." className="w-full p-2.5 md:p-3 border border-gray-300 dark:border-neutral-700 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-green-600 dark:focus:ring-green-500 bg-gray-50 dark:bg-[#111] dark:text-white placeholder-gray-400 dark:placeholder-gray-500" />
+                          <div className="flex justify-between items-center px-1">
+                            <span className="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-500">💡 พิมพ์ที่อยู่เต็ม แล้วกดค้นหาพิกัดด้านล่างได้เลย</span>
+                            {user && (
+                              <button type="button" onClick={handleQuickSaveAddress} className="text-[10px] md:text-xs text-green-700 dark:text-green-500 font-bold hover:underline">
+                                💾 บันทึกเป็นที่อยู่ประจำ
+                              </button>
+                            )}
                           </div>
-                          
-                          <div className="relative flex-1 w-full bg-gray-100 dark:bg-neutral-900">
-                            <div id="interactive-map" className="absolute inset-0 z-0"></div>
-                            
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[1000] pointer-events-none drop-shadow-xl pb-2">
-                              <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                            </div>
-
-                            <button type="button" onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
-                               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2 pt-1">
+                          <div className="flex gap-2">
+                            <button type="button" onClick={handleSearchAddress} className="flex-1 p-2.5 rounded-xl border bg-gray-100 dark:bg-neutral-800 border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700 text-xs md:text-sm font-bold transition flex items-center justify-center gap-2">
+                              🔍 ค้นหาพิกัดจากที่อยู่
                             </button>
                           </div>
 
-                          <button type="button" onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
-                             ✅ ยืนยันพิกัดปักหมุดตรงนี้
-                          </button>
+                          {!showMap ? (
+                            <button type="button" onClick={() => setShowMap(true)} className={`w-full p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs md:text-sm font-bold transition ${mapLink ? 'bg-green-50 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-400 shadow-sm' : 'bg-white dark:bg-[#111] border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'}`}>
+                              <svg className="w-4 h-4 md:w-5 md:h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                              {mapLink ? "📍 แก้ไขพิกัดปักหมุด" : "📍 เปิดแผนที่เพื่อปักหมุด (เลื่อนหาเองได้)"}
+                            </button>
+                          ) : (
+                            <div className="mt-2 rounded-xl overflow-hidden border-2 border-green-600 shadow-lg relative flex flex-col h-[350px] animate-in fade-in zoom-in duration-300">
+                              <div className="bg-[#0a4a2f] text-white text-xs md:text-sm text-center py-2 font-bold flex justify-between items-center px-4">
+                                <span>📍 ใช้นิ้วเลื่อนแผนที่ให้ตรงกับบ้านคุณ</span>
+                                <button type="button" onClick={() => setShowMap(false)} className="text-gray-300 hover:text-white px-2 py-1 rounded">✕ ปิด</button>
+                              </div>
+                              
+                              <div className="relative flex-1 w-full bg-gray-100 dark:bg-neutral-900">
+                                <div id="interactive-map" className="absolute inset-0 z-0"></div>
+                                
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[1000] pointer-events-none drop-shadow-xl pb-2">
+                                  <svg className="w-10 h-10 text-red-600 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                </div>
+
+                                <button type="button" onClick={handleGetLocation} className="absolute bottom-4 right-4 z-[1000] bg-white p-3 rounded-full shadow-xl border border-gray-200 text-blue-600 hover:bg-blue-50 transition flex items-center justify-center">
+                                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+                                </button>
+                              </div>
+
+                              <button type="button" onClick={() => { setShowMap(false); showToast("✅ บันทึกพิกัดแผนที่แล้ว"); }} className="w-full bg-[#f3c623] hover:bg-yellow-500 text-[#0a4a2f] py-3 font-extrabold text-sm border-t-2 border-[#0a4a2f] transition">
+                                 ✅ ยืนยันพิกัดปักหมุดตรงนี้
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
