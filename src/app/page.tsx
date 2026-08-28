@@ -14,7 +14,7 @@ export default function HomePage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<any>(null);
 
-  // 🌟 ระบบจัดการธีม
+  // 🌟 ระบบจัดการธีม (Auto-detect System Theme)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // --- สถานะระบบค้นหาสินค้า ---
@@ -35,10 +35,10 @@ export default function HomePage() {
   const [showPayment, setShowPayment] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   
-  // สถานะเก็บจำนวนสินค้าตอนเปิดป๊อปอัปดูรายละเอียด
+  // 🌟 สถานะสำหรับเก็บจำนวนสินค้าตอนเปิดป๊อปอัปดูรายละเอียด
   const [modalQty, setModalQty] = useState<number>(1);
 
-  // 🌟 (ใหม่) สถานะเปิด/ปิดกล่องข้อมูลผู้รับสินค้า (เพื่อประหยัดพื้นที่)
+  // 🌟 สถานะเปิด/ปิดกล่องข้อมูลผู้รับสินค้า (เพื่อประหยัดพื้นที่)
   const [isAddressOpen, setIsAddressOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState(""); 
@@ -56,7 +56,7 @@ export default function HomePage() {
   const [showMap, setShowMap] = useState(false); 
   const mapInstanceRef = useRef<any>(null); 
 
-  // เช็ก Theme
+  // เช็ก Theme อัตโนมัติเมื่อเข้าเว็บ
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("shop_theme") as 'light' | 'dark' | null;
@@ -69,6 +69,7 @@ export default function HomePage() {
     }
   }, []);
 
+  // อัปเดต HTML Class และจำค่า Theme
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -331,16 +332,16 @@ export default function HomePage() {
     setShowPayment(true); 
   };
 
-  // 🌟 (อัปเดต) ล็อกไม่ให้ลบสินค้าออกอัตโนมัติ ให้เหลือ 0 ไว้
+  // 🌟 ล็อกไม่ให้ติดลบ แต่ให้ลงไปต่ำสุดที่ 0 ได้ (สินค้าไม่ถูกลบออกจากตะกร้า)
   const updateQty = (productId: number, delta: number) => {
     setCart((prev) => {
       let newQty = (prev[productId] || 0) + delta;
-      if (newQty < 0) newQty = 0; // บังคับไม่ให้ติดลบ แต่ยอมให้เป็น 0 ได้[cite: 3]
+      if (newQty < 0) newQty = 0; 
       return { ...prev, [productId]: newQty };
     });
   };
 
-  // 🌟 ฟังก์ชันลบสินค้าออกจากตะกร้าโดยสมบูรณ์ (ใช้กับปุ่มถังขยะ)[cite: 3]
+  // 🌟 ถังขยะเท่านั้นที่จะลบสินค้าออกไปจากตะกร้าอย่างสมบูรณ์
   const removeItem = (productId: number) => {
     setCart((prev) => {
       const newCart = { ...prev };
@@ -350,14 +351,14 @@ export default function HomePage() {
     showToast("🗑️ ลบสินค้าออกจากตะกร้าแล้ว");
   };
 
-  // 🌟 (อัปเดต) จัดการตอนลูกค้าพิมพ์ตัวเลข ให้ถ้าลบตัวเลขทิ้งทั้งหมด (Backspace) ค่าจะกลายเป็น 0 โชว์ที่ช่องทันที[cite: 3]
+  // 🌟 (อัปเดต) ถ้ายกดลบ (Backspace) ออกจนหมด ให้แสดงค่าเป็น 0 ทันที
   const handleQtyChange = (productId: number, value: string) => {
     if (value === "") {
       setCart(prev => ({ ...prev, [productId]: 0 })); 
       return;
     }
     const num = parseInt(value, 10);
-    if (!isNaN(num) && num >= 0) { // ยอมรับค่าที่ 0 ขึ้นไป
+    if (!isNaN(num) && num >= 0) { 
       setCart(prev => ({ ...prev, [productId]: num }));
     }
   };
@@ -373,7 +374,7 @@ export default function HomePage() {
   const grandTotal = subtotal > 0 ? subtotal + shippingFee : 0;
 
   const handleConfirmOrder = async () => {
-    // 🌟 กรองเอาเฉพาะสินค้าที่มีจำนวนมากกว่า 0 (เพื่อป้องกันการส่งข้อมูลเปล่า)
+    // กรองเอาเฉพาะสินค้าที่มีจำนวนมากกว่า 0 (เพื่อป้องกันการส่งข้อมูลเปล่า)
     const finalCartItems = cartItems.filter(item => item.qty > 0);
     if (finalCartItems.length === 0) {
       setCustomAlert({ title: "ตะกร้าว่างเปล่า", message: "กรุณาเลือกจำนวนสินค้าอย่างน้อย 1 ชิ้น", type: "error" });
@@ -381,7 +382,7 @@ export default function HomePage() {
     }
 
     if (!fullName.trim() || !phone.trim() || !addressDetail.trim()) {
-      setIsAddressOpen(true); // 🌟 เด้งเปิดหน้าต่างผู้รับให้อัตโนมัติถ้าลืมกรอก
+      setIsAddressOpen(true); 
       setCustomAlert({ title: "ข้อมูลไม่ครบถ้วน", message: "กรุณากรอกชื่อ-นามสกุล เบอร์โทรศัพท์\nและที่อยู่จัดส่งให้ครบถ้วนครับ", type: "error" });
       return;
     }
@@ -427,14 +428,13 @@ export default function HomePage() {
       finalAddress += `\n📍 พิกัดแผนที่: ${mapLink}`;
     }
 
-    // 🌟 ใช้ข้อมูลที่ตัด 0 ออกแล้วในการพิมพ์ใบเสร็จ
     const orderListText = finalCartItems.map(item => `- ${item.name} x${item.qty}`).join('\n');
     const fullAddressText = `คุณ ${fullName} (${phone})\nที่อยู่: ${finalAddress}\n\nรายการสินค้า:\n${orderListText}`;
 
     try {
       const { data: newOrder, error: dbError } = await supabase.from('orders').insert({
         user_id: user.id,
-        items: finalCartItems, // 🌟 ส่งเฉพาะรายการที่ > 0
+        items: finalCartItems, 
         total_price: grandTotal,
         status: 'รอดำเนินการ'
       }).select();
@@ -760,14 +760,13 @@ export default function HomePage() {
 
               <div className="pt-4 border-t border-gray-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                 
-                {/* 🌟 ระบบเลือกจำนวนในหน้าต่างรายละเอียดสินค้า */}
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
                   <span className="text-sm font-bold text-gray-700 dark:text-gray-300">จำนวน:</span>
                   <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-neutral-700 rounded-xl px-1 py-1 shadow-sm">
                     <button onClick={() => setModalQty(Math.max(1, modalQty - 1))} className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg font-bold text-lg transition">-</button>
                     <input 
                       type="number" 
-                      value={modalQty === 0 ? "0" : modalQty.toString()}
+                      value={modalQty.toString()}
                       onChange={(e) => {
                         if (e.target.value === "") setModalQty(0);
                         else {
@@ -813,7 +812,8 @@ export default function HomePage() {
 
             <div className="p-5 md:p-6">
               {!showPayment ? (
-                totalItemsCount === 0 ? (
+                // 🌟 แก้เงื่อนไขให้เช็กจากจำนวน "รายการสินค้า" ไม่ใช่ "ยอดรวมชิ้น"
+                cartItems.length === 0 ? (
                   <div className="text-center py-12">
                     <svg className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     <p className="text-gray-500 dark:text-gray-500 text-sm md:text-lg">ยังไม่มีสินค้าในตะกร้า</p>
@@ -831,16 +831,18 @@ export default function HomePage() {
                             </div>
                           </div>
                           
-                          {/* 🌟 กล่องควบคุมจำนวน + ถังขยะ ในหน้าตะกร้า */}
                           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                             <div className="flex items-center gap-1 bg-white dark:bg-black border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-1 shadow-sm">
                               <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">-</button>
+                              
+                              {/* 🌟 ถ้าเป็นค่าว่าง (0) ให้แสดงเลข 0 ทันที */}
                               <input 
                                 type="number" 
                                 value={item.qty.toString()}
                                 onChange={(e) => handleQtyChange(item.id, e.target.value)}
                                 className="w-6 md:w-8 text-center text-xs md:text-sm font-bold bg-transparent outline-none dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
+
                               <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full font-bold text-sm md:text-base">+</button>
                             </div>
 
@@ -893,7 +895,6 @@ export default function HomePage() {
                           <div className="flex-1 min-w-0">
                             <h4 className="font-bold text-[#0a4a2f] dark:text-gray-200 text-[10px] md:text-xs truncate">{item.name}</h4>
                             
-                            {/* 🌟 (อัปเดต) กล่องควบคุมจำนวน + ถังขยะ ในหน้าจัดส่งและชำระเงินตามที่คุณขอ! */}
                             <div className="flex justify-between items-center mt-1 w-full gap-2">
                               <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-neutral-700 rounded-full px-1 py-0.5 shadow-sm">
                                 <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-full font-bold text-sm">-</button>
